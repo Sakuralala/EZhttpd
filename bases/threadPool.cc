@@ -1,3 +1,4 @@
+#include "thread.h"
 #include "threadPool.h"
 
 namespace bases

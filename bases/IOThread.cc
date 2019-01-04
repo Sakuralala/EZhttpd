@@ -4,7 +4,7 @@
 #include "eventLoop.h"
 namespace event
 {
-IOThread::IOThread() : latch_(1), thread_(std::bind(&IOThread::IOThreadFunc, this), "IO Thread"), loop_(nullptr)
+IOThread::IOThread() : Thread(std::bind(&IOThread::IOThreadFunc, this), "IO Thread"), loop_(nullptr)
 {
 }
 
@@ -14,27 +14,30 @@ IOThread::~IOThread()
     {
         //做不做无所谓，反正当前io线程都要析构了
         loop_->quit();
-        join();
+        //join();
     }
 }
-
 void IOThread::run()
 {
-    thread_.run();
-    //保证子线程已经创建完eventloop
+    Thread::run();
+    //Thread::run()只能保证IOThread至少准备开始执行IOThreadFunc,并不能保证eventloop已经被创建
+    //所以主线程需要再进一步等待一下(如果IOThreadFunc里已经countdown了那么主线程不会阻塞)
+    //另外，需要把negSemaphore改为信号量，因为刚开始cnt只减不增，这样会导致后续wait都无效
     latch_.wait();
 }
-
-void IOThread::join()
+//在存在eventLoop的情况下才能join
+void IOThread::join() 
 {
     if (loop_)
-        thread_.join();
+        Thread::join();
 }
 void IOThread::IOThreadFunc()
 {
     //在子线程真正开始执行时才创建eventloop对象
     EventLoop eLoop;
     loop_ = &eLoop;
+    //race condition:子线程先执行到此处时会导致cnt变为-1；
+    //解决方法：修改negSemaphore底层wait，在cnt>0时才wait;修改countDown,在cnt<=0时均进行notify;
     latch_.countdown();
     try
     {

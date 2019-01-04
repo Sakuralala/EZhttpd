@@ -6,7 +6,7 @@
 #define _thread_h
 #include <string>
 #include <functional>
-#include "countdownLatch.h"
+#include "negSemaphore.h"
 namespace bases
 {
 extern __thread int threadID;
@@ -17,15 +17,20 @@ public:
   typedef std::function<void()> threadFunc;
   explicit Thread(const threadFunc &tf, const std::string &);
   explicit Thread(threadFunc &&tf, const std::string &);
-  ~Thread();
+  //由IOThread继承  Thread需要一个虚析构函数
+  virtual ~Thread();
   bool isRunning() const { return running_; }
   bool isJoined() const { return joined_; }
   // glibc未对gettid做一个wrapper,所以需要直接调用syscall
   //所以需要在外面包一个wrapper以在进入用户回调之前调用一次gettid并缓存
   pid_t getTid() const { return tid_; }
-  void run();
-  void detach();
-  void join();
+  virtual void run();
+  virtual void detach();
+  virtual void join();
+
+protected:
+  //子线程是否初始化完成 为了让子类能够调用，使用protected
+  NegSemaphore latch_;
 
 private:
   //用户回调的wrapper
@@ -39,8 +44,6 @@ private:
   bool running_;
   bool joined_;
   std::string name_;
-  //子线程是否初始化完成
-  CountdownLatch latch_;
   threadFunc func_;
 };
 } // namespace bases

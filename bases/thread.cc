@@ -56,6 +56,7 @@ void Thread::run()
         }
         else
         {
+            //note:此处并不会丢失信号，因为countDownLatch把信号通过计数的方式保存了； 
             latch_.wait();
             // TODO:log<<"thread "<<tid_<<"started."<<endl;
            // std::cout << "thread " << tid_ << "started." << std::endl;
