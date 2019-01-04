@@ -13,6 +13,7 @@
 #include <vector>
 #include <functional>
 #include "mutex.h"
+#include "timer.h"
 
 namespace event
 {
@@ -39,7 +40,7 @@ public:
   //用于在IO线程中执行用户回调;或者将用户回调放到另一个IO线程中执行
   //这在主线程分配新连接给IO线程时很有用，大概来说让某个IO线程执行新连接建立后的回调
   //这个回调内部会将新连接相关信息加入到IO线程的epoll对象中
-  //可由非owner线程调用
+  //可由非owner线程调用 内部会根据当前线程是否为owner线程选择是否调用queueInLoop
   void runInLoop(const Callback &cb);
   //用于将用户回调加入回调列表中，并在必要时(不在对应的IO线程，或者正在执行用户回调)唤醒IO线程
   //可由非owner线程调用
@@ -50,6 +51,10 @@ public:
   void wakeup();
   //在当前事件循环的epoller中更新需要监控的事件
   void updateEvent(Event *ev);
+  //定时器事件添加
+  //TODO:存在重载函数的话，bind时需要显式将对应的绑定函数转换为对应要绑定的函数的函数类型的函数指针，代码比较丑陋
+  void addTimer(uint64_t secs,typename TimerSet::Callback cb);
+  void addTimer(const Timer &t);
   //执行一些自定义的回调
   void executeCallbacks();
 
@@ -77,6 +82,8 @@ private:
   CallbackList callbackList_;
   //用于保护callbackList_及isExecutingCallback,由于其有可能在其他线程中被读写，所以需要进行加锁操作
   bases::Mutex mutex_;
+  //定时器集合
+  TimerSet timerSet_;
 };
 extern __thread EventLoop *currentThreadLoop;
 } // namespace event

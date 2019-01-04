@@ -1,3 +1,4 @@
+#include <utility>
 #include <sys/eventfd.h>
 #include <unistd.h>
 #include "thread.h"
@@ -68,6 +69,18 @@ void EventLoop::updateEvent(Event *ev)
     //assertInOwnerThread();
     poller_->updateEvent(ev);
 }
+void EventLoop::addTimer(uint64_t secs,typename TimerSet::Callback cb)
+{
+    //无锁，所以需要保证由owner线程调用此函数
+    //其他线程通过queueInLoop或runInLoop进行间接调用
+    assertInOwnerThread();
+    timerSet_.add(secs,std::move(cb));
+}
+void EventLoop::addTimer(const Timer &t)
+{
+    assertInOwnerThread();
+    timerSet_.add(t);
+}
 //退出循环
 void EventLoop::quit()
 {
@@ -96,6 +109,8 @@ void EventLoop::loop()
                 eventPtr->handleEvent();
             readyList_.clear();
         }
+        //处理定时器事件
+        timerSet_.getExpired();
         //处理完就绪事件后处理用户或其他线程给的任务
         executeCallbacks();
     }

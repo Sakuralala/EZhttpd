@@ -2,8 +2,6 @@
 #define __iothread_h
 /**
  *  one loop per thread,即包含一个event loop的thread,即io线程；
- * 
- * 
  **/
 #include "thread.h"
 

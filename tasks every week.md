@@ -31,7 +31,7 @@ muduo中所说的用户是指基于muduo这个库做二次开发的调用者而�
 
 总结:这周零零散散地写了一部分代码，但是在后半段时一直没搞清楚对象生命期的管理问题(主要是channel类)，即是不是所有的堆上对象都无脑改用shared_ptr进行管理,感觉上这肯定是有一定问题的，比如说可能意外延长对象的生命期甚至导致其"永世长存",这就相当于内存泄漏了;决定停下来结合书看一下muduo的源码，但是还是感觉有点干巴巴的，没有什么具体的例子能够加深理解。  
 好在muduo提供了examples,里面的例子写得非常好，也顺带学习了下原始的gdb的用法，包括打断点、输出当前堆栈信息、输出变量的信息等，主要看了的有simple中的5个例子，这几个例子也纠正了我之前的一个误区，即muduo是作为一个网络库提供给开发者进行调用的，所以它的设计初衷是让使用者调用方便，以及考虑到调用者可能会出现的各种使用情况，如生命期管理相关的，要考虑到调用者的回调中可能存在导致channel对象或其owner对象被析构并释放的行为等。另外，asio/chat这个例子我重点追踪 了TcpConnection对象的引用计数变化情况，也看到了使用smart pointer来进行对象生命期管理所带来的便利性(前提是需要知道如何避免其潜在的弊端，主要是意外延长对象的生命期)。到这里为止基本理解了为什么要用smart pointer对TcpConnection对象进行管理(当然肯定也有其他的替代方案，内存池，或者是raw pointer，如果仔细设计的话，可能也不会有问题，但是使用smart pointer的优势就是方便高效且不容易出错,raw pointer可能现在不会出错，但是后面如果进行了修改什么的出错的概率相较smart pointer会大),但是对channel对象的生命期管理还不是很理解(channel对象肯定是需要在多个上层对象中进行传递的，那么是需要在每个用到它的类中都使用shared_ptr还是只在某个类中使用)，在追踪了curl这个例子之后，终于了解了作者设计其的初衷及做法，"由channel的owner对象对其生命期进行管理",即owner对象负责Channel成员的析构操作()，curl这个例子只用到了EventLoop及Channel类，而Channel类是作为Request对象的成员并使用了shared_ptr进行包装，在新建连接创建channel对象时就调用了对应的tie方法，这样后续在事件到来调用用户的回调时就可以保证当前channel对象在函数调用栈完全弹出前不会被销毁(handleEvent会先尝试提升之前tie的weak_ptr)，从而确保了程序正确的行为。  
-那么在用到channel对象的类中及使用channel作为参数的函数都使用shared_ptr是否可行呢?考虑下通常的移除channel的流程:对端断开连接事件触发Channel::handleEvent->调用用户的读事件回调onRead->onRead中调用Channel::remove以便在当前线程的epoll对象中删除监控->onRead末尾调用shared_ptr<Channel>::reset，可以看到由于Channel对象的生命期是在unregister之后才结束的，也就是说先前在EventLoop、Poller类中的传递调用都是保证其存活的，那么何必多此一举呢？而且这种做法并没有起到延长Channel对象的效果(因为在结束channel对象的生命前必须先将其从epoll对象中取消监控)。  
+那么在用到channel对象的类中及使用channel作为参数的函数都使用shared_ptr是否可行呢?考虑下通常的移除channel的流程:对端断开连接事件触发Channel::handleEvent->调用用户的读事件回调onRead->onRead中调用Channel::remove以便在当前线程的epoll对象中删除监控->onRead末尾调用shared_ptr<Channel>::reset，可以看到由于Channel对象的生命期是在unregister之后才结束的，也就是说先前在EventLoop、Poller类中的传递调用都是保证其存活的，那么何必多此一举呢？而且这种做法并没有起到延长Channel对象的效果(因为在onRead调用结束后channel已经没了,但是其函数调用栈还没结束)。  
 那将Channel对象作为其owner对象的直接成员是否可行呢？想了想似乎可行，这样Channel对象的生命期就和其owner对象一致，那么只需要做好其owner对象的生命期管理就可以保证正常的行为(TODO:)。但是这个有一个弊端，即增加了头文件依赖，暴露了内部类给用户。  
 2018.12.24-12.31  
 1、成员函数的线程安全性(即是否可以跨线程调用成员函数)  
@@ -39,7 +39,7 @@ muduo中所说的用户是指基于muduo这个库做二次开发的调用者而�
 但是如果没有锁的话，判断一个成员函数是否可以跨线程调用的基本原则就是看有没有可能发生多个线程同时对对象的某个成员进行读写操作,如果存在这种可能性，那么这个成员函数就不是线程安全的。      
 2、muduo中许多的成员都是通过unique_ptr来间接持有的，目的是为了降低用户使用时的编译依赖，尽量少暴露内部类给用户。   
 3、命名空间的问题、EventLoop类和Event类相互引用?  
-由于Event类需要在epoll中进行更新，所以需要一个他所属的EventLoop类的指针；EventLoop类需要知道当前就绪的Event，故需要Event指针；以及双方的前向声明；  
+由于Event类需要在epoll中进行更新，所以需要一个它所属的EventLoop类的指针；EventLoop类需要知道当前就绪的Event，故需要Event指针；以及双方的前向声明；  
 
 4、timerfd的使用.  
 timerfd_settime(),其中第二个参数有两个成员:  
@@ -50,3 +50,8 @@ timerfd_settime(),其中第二个参数有两个成员:
            };
 ```
 即，需要周期性定时的话需要设置it_interval;另外，注意epoll在ET模式下必须要先读了timerfd才能引发下一次的超时触发。  
+2019.01.02-2019.01-06  
+本周的任务是完成定时器的实现；muduo中使用的linux下较新的timerfd系统调用；考虑实现一个类似nginx那种形式的定时器。  
+
+2019.01.04  
+1、初步完成了定时器的设计，类似于nginx那种，但是暂时没做缓存；  
