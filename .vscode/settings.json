@@ -65,7 +65,8 @@
         "deque": "cpp",
         "unordered_map": "cpp",
         "unordered_set": "cpp",
-        "*.md": "markdown"
+        "*.md": "markdown",
+        "forward_list": "cpp"
     },
     "C_Cpp.intelliSenseEngineFallback": "Disabled"
 }

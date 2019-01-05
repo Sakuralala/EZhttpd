@@ -84,9 +84,9 @@ void EventLoop::addTimer(const Timer &t)
 //退出循环
 void EventLoop::quit()
 {
-    //防止其他线程刚将looping_置为false，owner线程刚好运行到while(looping_)后退出，
-    //进一步地使得owner IO线程的threadFunc退出从而导致eventloop对象析构，
-    //这样会导致UB;
+    //使用mutex防止其他线程刚将looping_置为false，owner线程刚好运行到while(looping_)后退出，
+    //进一步地使得owner IO线程的threadFunc退出从而导致eventloop对象析构，这样会导致UB;
+    //因为quit调用还没结束，其对象eventloop却销毁了
     bases::MutexGuard mg(mutex_);
     if (looping_)
     {

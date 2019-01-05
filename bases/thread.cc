@@ -13,13 +13,13 @@ namespace bases
 __thread int threadID = 0;
 pid_t currentThreadID()
 {
-    if(!threadID)
+    if (!threadID)
         threadID = gettid();
     return threadID;
 }
 //子线程的运行函数wrapper
 //说白了这个wrapper的作用只是为了进行一次系统调用缓存一下当前线程的id
-void* threadFuncWrapper(void *args)
+void *threadFuncWrapper(void *args)
 {
     Thread *t = static_cast<Thread *>(args);
     t->tid_ = currentThreadID();
@@ -36,12 +36,12 @@ void* threadFuncWrapper(void *args)
     }
     return nullptr;
 }
-Thread::Thread(const threadFunc &tf,const std::string &name)
+Thread::Thread(const threadFunc &tf, const std::string &name)
     : tid_(0), pthreadID_(0), running_(false), joined_(false), name_(name), latch_(1),
       func_(tf) {}
 
-Thread::Thread(threadFunc &&tf,const std::string& name)
-    : tid_(0), pthreadID_(0), running_(false), joined_(false),  name_(name),latch_(1),
+Thread::Thread(threadFunc &&tf, const std::string &name)
+    : tid_(0), pthreadID_(0), running_(false), joined_(false), name_(name), latch_(1),
       func_(std::move(tf)) {}
 
 void Thread::run()
@@ -56,10 +56,10 @@ void Thread::run()
         }
         else
         {
-            //note:此处并不会丢失信号，因为countDownLatch把信号通过计数的方式保存了； 
+            //note:此处并不会丢失信号，因为countDownLatch把信号通过计数的方式保存了；
             latch_.wait();
             // TODO:log<<"thread "<<tid_<<"started."<<endl;
-           // std::cout << "thread " << tid_ << "started." << std::endl;
+            // std::cout << "thread " << tid_ << "started." << std::endl;
         }
     }
 }
@@ -67,9 +67,13 @@ void Thread::run()
 void Thread::join()
 {
     if (running_ && !joined_)
-        pthread_join(pthreadID_,nullptr);
-    joined_ = true;
-    running_ = false;
+    {
+        pthread_join(pthreadID_, nullptr);
+        joined_ = true;
+        running_ = false;
+        //TODO:log_info<<"Thread:"<<tid_<<" stopped.";
+        cout << "Thread:" << tid_ << " stopped." << endl;
+    }
 }
 
 void Thread::detach()

@@ -16,7 +16,7 @@ class NegSemaphore : Nocopyable
         MutexGuard mg(mutex_);
         while (count_>0)
             cond_.wait();
-        //为了能够多次使用这个negSemaphore  这样一改这其实就是一个信号量了。。
+        //为了能够多次使用这个countdownLatch 这样一改这其实就是一个信号量了。。
         count_++;
     }
 

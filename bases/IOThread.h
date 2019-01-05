@@ -15,7 +15,7 @@ class CoutdownLatch;
 namespace event
 {
 class EventLoop;
-class IOThread:public bases::Thread
+class IOThread : public bases::Thread
 {
 public:
   IOThread();

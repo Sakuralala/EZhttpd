@@ -57,3 +57,8 @@ timerfd_settime(),其中第二个参数有两个成员:
 1、初步完成了定时器的设计，类似于nginx那种，但是暂时没做缓存；  
 
 2、IOThread和Thread间采取继承关系可以再省掉一个negSemaphore?  
+由于countdownLatch是一次性的，在父类Thread里用了就不能用了，所以直接将其改成了类似信号量的形式，这样才能省一个。  
+
+
+2019.01.05  
+1、初步完成了io线程池的设计，

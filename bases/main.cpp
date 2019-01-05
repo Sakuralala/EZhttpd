@@ -2,10 +2,11 @@
 #include <sys/timerfd.h>
 #include <string.h>
 #include <unistd.h>
-#include "IOThread.h"
+#include "IOThreadPool.h"
 #include "eventLoop.h"
 #include "event.h"
 #include "timer.h"
+#include "thread.h"
 using namespace bases;
 using namespace event;
 using std::cout;
@@ -24,19 +25,27 @@ void timeout()
     if(::read(*globalFd,&one,sizeof one)!=sizeof one)
         throw;
         */
-        
+
     cout << "Thread ID:" << bases::currentThreadID() << ",timeout." << endl;
     globalLoop->quit();
 }
 int main()
 {
-    Timer ti1(2);
-    ti1.setCallback(&timeout);
-    IOThread t1;
-    t1.run();
-    globalLoop = t1.getLoop();
-    globalLoop->runInLoop(std::bind((void(EventLoop::*)(const Timer&))&EventLoop::addTimer,globalLoop,ti1));
-    t1.join();
+   int num = 4;
+    IOThreadPool iotp;
+    iotp.start(num);
+    while (num)
+    {
+        /*
+        Timer ti1(num);
+        ti1.setCallback(&timeout);
+        iotp.put(std::bind((void (EventLoop::*)(const Timer&))&EventLoop::addTimer,iotp.getNextLoop(),ti1));
+        */
+        iotp.put(std::bind((void (EventLoop::*)(uint64_t, typename TimerSet::Callback)) & EventLoop::addTimer, iotp.getNextLoop(), num*2, &timeout));
+        num--;
+    }
+    iotp.stop();
+
     /*
     cout << "thread id:" << bases::currentThreadID() << endl;
     //TODO:多次定时

@@ -62,8 +62,7 @@ void TimerSet::getExpired()
 
 void TimerSet::add(uint64_t secs, Callback cb)
 {
-    auto cur = Timer::now();
-    timerSet_.insert(Timer(secs * 1000 + cur.getTime(), std::move(cb)));
+    timerSet_.insert(Timer(secs, std::move(cb)));
 }
 void TimerSet::add(const Timer &t)
 {

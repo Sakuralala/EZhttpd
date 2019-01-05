@@ -22,7 +22,7 @@ void IOThread::run()
     Thread::run();
     //Thread::run()只能保证IOThread至少准备开始执行IOThreadFunc,并不能保证eventloop已经被创建
     //所以主线程需要再进一步等待一下(如果IOThreadFunc里已经countdown了那么主线程不会阻塞)
-    //另外，需要把negSemaphore改为信号量，因为刚开始cnt只减不增，这样会导致后续wait都无效
+    //另外，需要把countdownLatch改为信号量，因为刚开始cnt只减不增，这样会导致后续wait都不需要等待
     latch_.wait();
 }
 //在存在eventLoop的情况下才能join
