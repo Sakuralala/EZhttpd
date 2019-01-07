@@ -66,15 +66,16 @@ void EventLoop::wakeup()
 }
 void EventLoop::updateEvent(Event *ev)
 {
-    //assertInOwnerThread();
+    //为了保护event的成员
+    assertInOwnerThread();
     poller_->updateEvent(ev);
 }
-void EventLoop::addTimer(uint64_t secs,typename TimerSet::Callback cb)
+void EventLoop::addTimer(uint64_t secs, typename TimerSet::Callback cb)
 {
     //无锁，所以需要保证由owner线程调用此函数
     //其他线程通过queueInLoop或runInLoop进行间接调用
     assertInOwnerThread();
-    timerSet_.add(secs,std::move(cb));
+    timerSet_.add(secs, std::move(cb));
 }
 void EventLoop::addTimer(const Timer &t)
 {
@@ -150,9 +151,7 @@ void EventLoop::executeCallbacks()
     for (auto &cb : tmp)
         cb();
 
-    {
-        bases::MutexGuard mg(mutex_);
-        isExecutingCallback = false;
-    }
+    bases::MutexGuard mg(mutex_);
+    isExecutingCallback = false;
 }
 } // namespace event

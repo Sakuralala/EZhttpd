@@ -6,7 +6,7 @@
 #define _thread_h
 #include <string>
 #include <functional>
-#include "negSemaphore.h"
+#include "countdownLatch.h"
 namespace bases
 {
 extern __thread int threadID;
@@ -30,7 +30,7 @@ public:
 
 protected:
   //子线程是否初始化完成 为了让子类能够调用，使用protected
-  NegSemaphore latch_;
+  CountdownLatch latch_;
 
 private:
   //用户回调的wrapper

@@ -34,6 +34,7 @@ public:
 private:
   //这里极其罕见地使用了owning raw pointer,因为决定让loop是一个栈上对象
   EventLoop *loop_;
+  bases::CountdownLatch latch__;
 };
 } // namespace event
 #endif // !__eventloopthread_h

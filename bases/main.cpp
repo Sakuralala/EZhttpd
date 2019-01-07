@@ -27,7 +27,6 @@ void timeout()
         */
 
     cout << "Thread ID:" << bases::currentThreadID() << ",timeout." << endl;
-    globalLoop->quit();
 }
 int main()
 {
@@ -44,6 +43,7 @@ int main()
         iotp.put(std::bind((void (EventLoop::*)(uint64_t, typename TimerSet::Callback)) & EventLoop::addTimer, iotp.getNextLoop(), num*2, &timeout));
         num--;
     }
+    sleep(10);
     iotp.stop();
 
     /*
