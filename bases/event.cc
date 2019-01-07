@@ -7,7 +7,7 @@ namespace event
 const int Event::WriteEvent= EPOLLOUT;
 const int Event::ReadEvent = EPOLLIN | EPOLLPRI;
 //需要监控的事件对应的文件描述符，感兴趣的事件类型
-Event::Event(int fd, EventLoop *loop) : fd_(fd),mutex_(), operation_(-1),readyType_(0), loop_(loop)
+Event::Event(int fd, EventLoop *loop) : fd_(fd), operation_(-1),readyType_(0), loop_(loop)
 {
     if(!loop_)
     {
