@@ -1,5 +1,5 @@
 #include <iostream>
-#include <sys/timerfd.h>
+#include <sys/time.h>
 #include <string.h>
 #include <unistd.h>
 #include "IOThreadPool.h"
@@ -20,11 +20,8 @@ void loopFunc()
 }
 void timeout()
 {
-    /*
-    uint64_t one = 0;
-    if(::read(*globalFd,&one,sizeof one)!=sizeof one)
-        throw;
-        */
+    timeval tv;
+    gettimeofday(&tv,nullptr);
 
     cout << "Thread ID:" << bases::currentThreadID() << ",timeout." << endl;
 }
@@ -45,7 +42,6 @@ int main()
     }
     sleep(10);
     iotp.stop();
-
     /*
     cout << "thread id:" << bases::currentThreadID() << endl;
     //TODO:多次定时

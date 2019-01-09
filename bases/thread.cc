@@ -2,6 +2,7 @@
 //for syscall
 #include <sys/syscall.h>
 #include <unistd.h>
+#include <stdio.h>//for snprintf
 //#include <utility>
 #include "thread.h"
 using std::cout;
@@ -10,11 +11,19 @@ using std::endl;
 namespace bases
 {
 //缓存当前线程的id
-__thread int threadID = 0;
+__thread pid_t threadID = 0;
+__thread int threadIDLength = 0;
+//预先格式化线程id的字符串，以便log时使用
+//INT_MAX为10位;
+__thread char threadIDString[11];
 pid_t currentThreadID()
 {
     if (!threadID)
+    {
         threadID = gettid();
+        threadIDLength = snprintf(threadIDString,sizeof threadIDString,"%5d",threadID);
+    }
+
     return threadID;
 }
 //子线程的运行函数wrapper
@@ -87,7 +96,7 @@ void Thread::detach()
 
 Thread::~Thread()
 {
-    //detach();
-    join();
+    detach();
+    //join();
 }
 } // namespace bases
