@@ -1,13 +1,15 @@
 #include "asyncLog.h"
+#include "logFile.h"
 
 namespace bases
 {
 
-AsyncLog::AsyncLog() : thread_(std::bind(&AsyncLog::writeToFile, this), "Log thread"), latch_(1), mutex_(), cond_(mutex_), looping_(false), current_(new LogBuffer), empty_(MaxNumber - 1)
+AsyncLog::AsyncLog(const std::string &pathname) :pathName_(pathname), thread_(std::bind(&AsyncLog::writeToFile, this), "Log thread"), latch_(1), mutex_(), cond_(mutex_), looping_(false), current_(new LogBuffer), empty_(MaxNumber - 1)
 {
     full_.reserve(MaxNumber);
     for (int i = 0; i < empty_.size(); ++i)
-        empty_.emplace_back(new LogBuffer);
+        //empty_.emplace_back(new LogBuffer);
+        empty_[i] = std::unique_ptr<LogBuffer>(new LogBuffer);
 }
 AsyncLog::~AsyncLog()
 {
@@ -54,6 +56,7 @@ void AsyncLog::writeToFile()
     looping_ = true;
     BufferVector fullCopy;
     fullCopy.reserve(MaxNumber);
+    LogFile lf(pathName_);
     latch_.countdown();
     while (looping_)
     {
@@ -74,6 +77,7 @@ void AsyncLog::writeToFile()
         for (auto &buffer : fullCopy)
         {
             //TODO:写入文件
+            lf.append(buffer->begin(),buffer->length());
             //每写完一块就把空闲的放回去
             //由于是多生产者单消费者问题，所以这里可能会长时间等锁反而得不偿失
             /*
@@ -88,12 +92,14 @@ void AsyncLog::writeToFile()
         //TODO:比较两种方式的效率
         //全写完了再一起放回去
         {
-            MutexGuard mg(mutex_);
-            for (auto &buffer : fullCopy)
-                empty_.emplace_back(std::move(buffer));
-            fullCopy.clear();
+                MutexGuard mg(mutex_);
+                for(auto &buffer:fullCopy)
+                    empty_.emplace_back(std::move(buffer));
+                fullCopy.clear();
         }
+        lf.flush();
     }
     //TODO:善后处理 把剩余的日志全部写入
+    lf.flush();
 }
 } // namespace bases

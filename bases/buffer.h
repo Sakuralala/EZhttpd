@@ -33,9 +33,14 @@ class FixedLengthBuffer
     {
         return sizeof buffer_;
     }
-    char *current()
+    char *current() const
     {
         return cur_;
+    }
+    const char *begin() const
+    {
+        //buffer: char const[]
+        return buffer_;
     }
     void add(size_t len)
     {

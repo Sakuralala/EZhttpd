@@ -7,11 +7,13 @@
 #include <vector>
 #include <memory>
 #include <functional>
+#include <string>
 #include "thread.h"
 #include "mutex.h"
 #include "countdownLatch.h"
 #include "condition.h"
 #include "buffer.h"
+
 namespace bases
 {
 class AsyncLog
@@ -21,7 +23,7 @@ public:
   typedef FixedLengthBuffer<LargeBufferLength> LogBuffer;
   typedef std::unique_ptr<LogBuffer> LogBufferPtr;
   typedef std::vector<LogBufferPtr> BufferVector;
-  AsyncLog();
+  AsyncLog(const std::string &pathname);
   ~AsyncLog();
   void run();
   void stop();
@@ -31,6 +33,7 @@ public:
   void writeToFile();
 
 private:
+  std::string pathName_;
   Thread thread_;
   //让日志线程能够开始执行
   CountdownLatch latch_;
