@@ -15,15 +15,22 @@ bool Epoller::updateEvent(Event *ev)
 {
     int fd = ev->getFd();
     int op = ev->getOperation();
+    if(op==-1)
+    {
+        op = EPOLL_CTL_ADD;
+        ev->setOperation(EPOLL_CTL_ADD);
+    }
     epoll_event ee;
     memset(&ee, 0, sizeof(epoll_event));
     ee.events = ev->getInterestedType();
     ee.data.ptr = static_cast<void *>(ev);
+
     if (op == EPOLL_CTL_ADD)
     {
+        ev->setOperation(EPOLL_CTL_MOD);
         if (::epoll_ctl(epollFd_, EPOLL_CTL_ADD, fd, &ee))
         {
-            //TODO:log_error<<"epoll add error occured in thread:"<<currentThreadID();
+            //TODO:log_info<<"epoll add error occured in thread:"<<currentThreadID();
             return false;
         }
     }
@@ -31,7 +38,7 @@ bool Epoller::updateEvent(Event *ev)
     {
         if (::epoll_ctl(epollFd_, EPOLL_CTL_MOD, fd, &ee))
         {
-            //TODO:log_error<<"epoll add error occured in thread:"<<currentThreadID();
+            //TODO:log_info<<"epoll mod error occured in thread:"<<currentThreadID();
             return false;
         }
     }
@@ -39,7 +46,7 @@ bool Epoller::updateEvent(Event *ev)
     {
         if (::epoll_ctl(epollFd_, EPOLL_CTL_DEL, fd, &ee))
         {
-            //TODO:log_error<<"epoll add error occured in thread:"<<currentThreadID();
+            //TODO:log_info<<"epoll del error occured in thread:"<<currentThreadID();
             return false;
         }
     }

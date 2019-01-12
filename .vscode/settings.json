@@ -67,6 +67,5 @@
         "unordered_set": "cpp",
         "*.md": "markdown",
         "forward_list": "cpp"
-    },
-    "C_Cpp.intelliSenseEngineFallback": "Disabled"
+    }
 }

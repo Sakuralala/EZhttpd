@@ -1,71 +1,56 @@
+#include <string>
+#include <vector>
 #include <iostream>
 #include <sys/timerfd.h>
 #include <string.h>
 #include <unistd.h>
-#include "IOThreadPool.h"
-#include "eventLoop.h"
-#include "event.h"
-#include "timer.h"
+#include <fstream>
+#include <sstream>
+#include <stdlib.h>
+#include "asyncLog.h"
 #include "thread.h"
 using namespace bases;
-using namespace event;
 using std::cout;
 using std::endl;
-
-EventLoop *globalLoop = nullptr;
-int *globalFd = nullptr;
-void loopFunc()
+using std::ifstream;
+using std::istringstream;
+using std::string;
+using std::vector;
+vector<string> getString(ifstream &inFile)
 {
-    globalLoop->loop();
+    string line, word;
+    vector<string> ret;
+    while (getline(inFile, line))
+    {
+        istringstream record(line);
+        while (record >> word)
+            ret.push_back(word);
+    }
+    return ret;
 }
-void timeout()
+AsyncLog *globalAsync = nullptr;
+void logFunc(const char *msg, size_t len)
 {
-    /*
-    uint64_t one = 0;
-    if(::read(*globalFd,&one,sizeof one)!=sizeof one)
-        throw;
-        */
-
-    cout << "Thread ID:" << bases::currentThreadID() << ",timeout." << endl;
-    globalLoop->quit();
+    globalAsync->append(msg, len);
 }
 int main()
 {
-   int num = 4;
-    IOThreadPool iotp;
-    iotp.start(num);
-    while (num)
+    //同下  使用绝对路径
+    ifstream inFile("/home/oldhen/cpptest/miscs/open");
+    //vector<string> vs = getString(inFile);
+    //fopen的相对路径中的当前目录在不同的环境下是不同的  
+    //在命令行中直接调用可执行文件(或gdb)  相对路径的当前目录就是可执行文件所在的目录
+    //但是在vscode里执行  相对路径的当前目录是工程的目录
+    //所以切记使用绝对路径
+    AsyncLog logging("/home/oldhen/cpptest/logfile/");
+    logging.run();
+    string line;
+    while (getline(inFile, line))
     {
-        /*
-        Timer ti1(num);
-        ti1.setCallback(&timeout);
-        iotp.put(std::bind((void (EventLoop::*)(const Timer&))&EventLoop::addTimer,iotp.getNextLoop(),ti1));
-        */
-        iotp.put(std::bind((void (EventLoop::*)(uint64_t, typename TimerSet::Callback)) & EventLoop::addTimer, iotp.getNextLoop(), num*2, &timeout));
-        num--;
+        if (line.empty())
+            continue;
+        line += '\n';
+        logging.append(line.c_str(), line.size());
     }
-    iotp.stop();
-
-    /*
-    cout << "thread id:" << bases::currentThreadID() << endl;
-    //TODO:多次定时
-    int timerfd = ::timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK | TFD_CLOEXEC);
-    globalFd = &timerfd;
-    struct itimerspec tm;
-    memset(&tm,0,sizeof tm);
-    //首次触发
-    tm.it_value.tv_sec = 2;
-    //周期性触发
-    tm.it_interval.tv_sec = 1;
-    IOThread t1;
-    t1.run();
-    globalLoop = t1.getLoop();
-    event::Event ev(timerfd, globalLoop);
-    ev.setReadCallback(&timeout);
-    //保证对epoll对象的更新由owner线程完成
-    globalLoop->runInLoop(std::bind(&event::Event::enableRead,&ev));
-    ::timerfd_settime(timerfd,0,&tm,nullptr);
-    t1.join();
-    ::close(timerfd);
-    */
+    logging.stop();
 }

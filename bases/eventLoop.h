@@ -4,10 +4,9 @@
  *io线程的主循环，正常情况下就是在使用多路复用器(epoll)在等待就绪事件，有就绪事件后就依次调 
  *用各个回调；它由某个线程创建，并且从始至终属于创建它的那个线程，且一个线程只能有一个event
  *loop;
- *
- * 
- * 
- * 
+ *是否使用锁的总体原则:需要跨线程调用的函数，若存在同时读写成员的可能性就要加锁;不能跨线程使用
+ *的函数，必须在开头检查是否为owner线程调用，否则直接报错退出；另外，锁的持有者应该是成员对象
+ *的拥有者而不是调用者；     
 **/
 #include <memory>
 #include <vector>
@@ -45,18 +44,12 @@ public:
   //用于将用户回调加入回调列表中，并在必要时(不在对应的IO线程，或者正在执行用户回调)唤醒IO线程
   //可由非owner线程调用
   void queueInLoop(Callback cb);
-  //被唤醒后的当前IO线程调用的回调
-  void readHandler();
-  //唤醒当前EventLoop所对应的线程,可由非owner线程调用
-  void wakeup();
-  //在当前事件循环的epoller中更新需要监控的事件
+  //在当前事件循环的epoller中更新需要监控的事件,由于epoll对象内部有锁保护，所以这个函数可以跨线程且不需要加锁
   void updateEvent(Event *ev);
   //定时器事件添加
   //TODO:存在重载函数的话，bind时需要显式将对应的绑定函数转换为对应要绑定的函数的函数类型的函数指针，代码比较丑陋
   void addTimer(uint64_t secs,typename TimerSet::Callback cb);
   void addTimer(const Timer &t);
-  //执行一些自定义的回调
-  void executeCallbacks();
 
 private:
   //仅在loop()及quit()中可以读写,在quit()中读写需加锁(因为可能会跨线程)
@@ -84,6 +77,13 @@ private:
   bases::Mutex mutex_;
   //定时器集合
   TimerSet timerSet_;
+  /*************************以下几个为仅供内部调用的函数************************************/
+  //执行一些自定义的回调  
+  void executeCallbacks();
+  //被唤醒后的当前IO线程调用的回调
+  void readHandler();
+  //唤醒当前EventLoop所对应的线程,可由非owner线程调用
+  void wakeup();
 };
 extern __thread EventLoop *currentThreadLoop;
 } // namespace event
