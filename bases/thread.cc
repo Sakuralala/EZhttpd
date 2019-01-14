@@ -2,8 +2,9 @@
 //for syscall
 #include <sys/syscall.h>
 #include <unistd.h>
-#include <stdio.h>//for snprintf
+#include <stdio.h> //for snprintf
 //#include <utility>
+#include "logger.h"
 #include "thread.h"
 using std::cout;
 using std::endl;
@@ -21,7 +22,7 @@ pid_t currentThreadID()
     if (!threadID)
     {
         threadID = gettid();
-        threadIDLength = snprintf(threadIDString,sizeof threadIDString,"%5d",threadID);
+        threadIDLength = snprintf(threadIDString, sizeof threadIDString, "%5d", threadID);
     }
 
     return threadID;
@@ -32,7 +33,8 @@ void *threadFuncWrapper(void *args)
 {
     Thread *t = static_cast<Thread *>(args);
     t->tid_ = currentThreadID();
-    std::cout << "Sub thread " << t->tid_ << " created,ready to run." << std::endl;
+    //std::cout << "Sub thread " << t->tid_ << " created,ready to run." << std::endl;
+    //一个隐蔽的错误，LOG_INFO不能在这个函数里出现
     t->latch_.countdown();
     try
     {
@@ -40,7 +42,6 @@ void *threadFuncWrapper(void *args)
     }
     catch (...)
     {
-        //TODO: log<<"thread "<<t->tid<<"run error."<<endl;
         throw;
     }
     return nullptr;
@@ -60,15 +61,16 @@ void Thread::run()
         running_ = true;
         if (pthread_create(&pthreadID_, nullptr, threadFuncWrapper, this))
         {
-            // TODO:log<<"thread create failed."<<endl;
+            LOG_FATAL << "Create thread failed.";
             running_ = false;
         }
         else
         {
             //note:此处并不会丢失信号，因为countDownLatch把信号通过计数的方式保存了；
             latch_.wait();
-            // TODO:log<<"thread "<<tid_<<"started."<<endl;
             // std::cout << "thread " << tid_ << "started." << std::endl;
+            //FIXME:死锁了这里 
+            //LOG_INFO << "Sub thread " << tid_ << " created, ready to run.";
         }
     }
 }
@@ -80,8 +82,6 @@ void Thread::join()
         pthread_join(pthreadID_, nullptr);
         joined_ = true;
         running_ = false;
-        //TODO:log_info<<"Thread:"<<tid_<<" stopped.";
-        cout << "Thread:" << tid_ << " stopped." << endl;
     }
 }
 
@@ -89,7 +89,6 @@ void Thread::detach()
 {
     if (running_ && !joined_)
     {
-        //TODO:log<<"thread "<<tid_<<" detached.";
         pthread_detach(pthreadID_);
     }
 }

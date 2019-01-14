@@ -1,5 +1,6 @@
 #include "thread.h"
 #include "threadPool.h"
+#include "logger.h"
 
 namespace bases
 {
@@ -14,7 +15,8 @@ void ThreadPool::start(int threadNum)
 {
     if (threadNum > 0 && !running_)
     {
-        std::cout << "Thread pool started." << std::endl;
+        LOG_INFO << "Thread pool started.";
+        //std::cout << "Thread pool started." << std::endl;
         running_ = true;
         threads_.reserve(threadNum);
         while (threadNum--)
@@ -38,9 +40,10 @@ void ThreadPool::stop(ExitMode em)
         for (auto &thread : threads_)
         {
             thread->join();
-            std::cout << "thread " << thread->getTid() << " destroyed." << std::endl;
+            //std::cout << "thread " << thread->getTid() << " destroyed." << std::endl;
         }
-        std::cout << "Thread pool destroyed, current task queue size:" << taskQueue_.size() << std::endl;
+        //std::cout << "Thread pool destroyed, current task queue size:" << taskQueue_.size() << std::endl;
+        LOG_INFO << "Thread pool destroyed, current task queue size:" << taskQueue_.size();
     }
 }
 ThreadPool::Task ThreadPool::get()
@@ -58,7 +61,10 @@ ThreadPool::Task ThreadPool::get()
     if (running_ || (eMode_ == Graceful && !taskQueue_.empty()))
     {
         if (!running_)
-            std::cout << "Sub thread:" << currentThreadID() << ",do some final works,current task queue size:" << taskQueue_.size() << std::endl;
+        {
+            //std::cout << "Sub thread:" << currentThreadID() << ",do some final works,current task queue size:" << taskQueue_.size() << std::endl;
+            LOG_INFO << "Sub thread:" << currentThreadID() << ", do some final works, current task size:" << taskQueue_.size();
+        }
         task = std::move(taskQueue_.front());
         taskQueue_.pop_front();
         notFull_.notify();

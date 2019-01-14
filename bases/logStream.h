@@ -12,8 +12,13 @@ namespace bases
 class LogStream
 {
   public:
+    typedef FixedLengthBuffer<SmallBufferLength> SmallBuffer;
     LogStream() {}
-    ~LogStream() {}
+    ~LogStream()=default;
+    SmallBuffer &getBuffer()
+    {
+        return buffer_;
+    }
     LogStream &operator<<(bool val)
     {
         buffer_.append(val ? "1" : "0", 1);
@@ -64,11 +69,12 @@ class LogStream
     LogStream &operator<<(double val);
 
   private:
-    FixedLengthBuffer<SmallBufferLength>
-        buffer_;
+    SmallBuffer buffer_;
     //用于快速将数字转换为字符串
     template <typename T>
     void formatInterger(T val);
 };
+//最简单的实现流式Log的方式，当然，为了提供不同的log级别，我们需要再封装一层
+//#define Log LogStream()
 } // namespace bases
 #endif // !__logstream_h

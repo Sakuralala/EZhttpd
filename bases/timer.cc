@@ -37,7 +37,7 @@ std::string Timer::format()
     struct tm formatedTime;
     time_t seconds = static_cast<time_t>(microSeconds_ / 1000);
     gmtime_r(&seconds, &formatedTime);
-    snprintf(buf, sizeof(buf), "%4d:%02d:%02d %02d:%02d:%02d,%s,UTC.",
+    snprintf(buf, sizeof(buf), "%4d:%02d:%02d %02d:%02d:%02d,%s,UTC ",
              formatedTime.tm_year + 1900, formatedTime.tm_mon + 1, formatedTime.tm_mday,
              formatedTime.tm_hour, formatedTime.tm_min, formatedTime.tm_sec, DayofWeek[formatedTime.tm_wday]);
     return buf;

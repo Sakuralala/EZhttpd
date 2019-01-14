@@ -2,6 +2,7 @@
 #include "IOThreadPool.h"
 #include "IOThread.h"
 #include "eventLoop.h"
+#include "logger.h"
 namespace event
 {
 IOThreadPool::IOThreadPool() : tid_(bases::currentThreadID()),next_(0),started_(false){}
@@ -17,8 +18,8 @@ void IOThreadPool::start(uint32_t num)
         loops_.push_back(IOThreads_.back()->getLoop());
     }
     started_ = true;
-    //TODO:log_info<<"IO thread pool started.";
-    std::cout << "IO thread pool started." << std::endl;
+    LOG_INFO << "IO thread pool started.";
+    //std::cout << "IO thread pool started." << std::endl;
 }
 void IOThreadPool::stop()
 {
@@ -27,6 +28,7 @@ void IOThreadPool::stop()
         thread->join();
     }
     //TODO:log_info<<"IO thread pool stopped."
+    LOG_INFO << "IO thread pool stopped.";
 }
 void IOThreadPool::put(Task task)
 {
@@ -37,7 +39,8 @@ void IOThreadPool::put(Task task)
     else
     {
         //TODO:log_fatal<<"Not in owner thread.";
-        throw;
+        LOG_FATAL << "Not in owner thread.";
+        //throw;
     }
 }
 } // namespace event

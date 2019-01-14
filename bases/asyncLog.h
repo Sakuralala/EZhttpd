@@ -16,9 +16,10 @@
 
 namespace bases
 {
+//TODO:改成读取配置文件配置项的形式，或者是读取命令行参数的形式
+extern std::string LogPath;
 class AsyncLog
 {
-
 public:
   typedef FixedLengthBuffer<LargeBufferLength> LogBuffer;
   typedef std::unique_ptr<LogBuffer> LogBufferPtr;
@@ -55,7 +56,7 @@ private:
   //写满了的buffer块
   BufferVector full_;
   //满的buffer块和备用buffer块之和的最大值
-  static const int MaxNumber=16;
+  static const int MaxNumber = 16;
   static const int DefaultWriteSeconds = 5;
 };
 } // namespace bases

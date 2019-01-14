@@ -1,12 +1,16 @@
 //#include <algorithm>
-#include <stdio.h>//for snprintf
+#include <stdio.h> //for snprintf
 #include "logStream.h"
-
+//#include "asyncLog.h"
+//#include "singleton.h"
 namespace bases
 {
 const int MaxNumberLength = 32;
 const char digits[] = "9876543210123456789";
 const char *zero = digits + 9;
+//一个后端线程就行
+//AsyncLog *logThreadPtr = nullptr;
+
 //快速将数字转换为字符串的算法,copy from muduo.
 template <typename T>
 size_t convert(char *buf, T val)
@@ -22,9 +26,9 @@ size_t convert(char *buf, T val)
     //TODO:为啥要加
     *buf = '\0';
     //std::reverse(begin, buf);
-    size_t len= buf - begin;
+    size_t len = buf - begin;
     buf--;
-    while(begin<buf)
+    while (begin < buf)
     {
         //整数  没问题
         *begin ^= *buf;
@@ -34,6 +38,16 @@ size_t convert(char *buf, T val)
     }
     return len;
 }
+//在析构时将消息输出到日志
+/*
+LogStream::~LogStream()
+{
+    *this << "\n";
+    //多线程环境下，保证初始化函数只被调用一次  pthread_once 或者c++11的call_once
+    Singleton<AsyncLog>::getInstance()->append(buffer_.begin(),buffer_.length());
+}
+*/
+
 template <typename T>
 void LogStream::formatInterger(T val)
 {
@@ -89,9 +103,9 @@ LogStream &LogStream::operator<<(float val)
 //什么grisus3 打扰了
 LogStream &LogStream::operator<<(double val)
 {
-    if(buffer_.available()>=MaxNumberLength)
+    if (buffer_.available() >= MaxNumberLength)
     {
-        int len=snprintf(buffer_.current(),MaxNumberLength,"%.12g",val);
+        int len = snprintf(buffer_.current(), MaxNumberLength, "%.12g", val);
         buffer_.add(len);
     }
     return *this;
