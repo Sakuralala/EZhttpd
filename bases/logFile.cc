@@ -15,7 +15,7 @@ void LogFile::append(const char *buf, size_t len)
     file_->append(buf, len);
     if (++cnt_ > flushInterval_)
         file_->flush();
-    //超大小 roll
+    //超大小 roll FIXME:超大小不roll???
     if (file_->getCurrentSize() > RollSize)
         rollFile();
 }

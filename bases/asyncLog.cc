@@ -89,6 +89,7 @@ void AsyncLog::writeToFile()
             /*
             {
                 MutexGuard mg(mutex_);
+                buffer->clear();
                 empty_.emplace_back(std::move(buffer));
                 //等到全写完了再整体清理 pop_front会造成大量的整体移动
                 //fullCopy.pop_front();
@@ -104,8 +105,9 @@ void AsyncLog::writeToFile()
                 buffer->clear();
                 empty_.emplace_back(std::move(buffer));
             }
-            fullCopy.clear();
         }
+        //如果把clear放在临界区内，速度竟然会慢5s之多！！！(按行输出man open的每个单词)
+        fullCopy.clear();
         lf.flush();
     }
     //善后处理 把剩余的日志全部写入

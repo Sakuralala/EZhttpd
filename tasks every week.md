@@ -132,3 +132,18 @@ LOG_INFO<<"Log test,"<<"dont worry.";
 ```cpp
 LogStream().operator<<("Log test,").operator<<("dont worry");
 ```
+
+2019.01.07-2019.01.14  
+完成了日志模块的设计。实现了以下的功能:  
+1)、输出信息的级别控制，存在一个全局的当前输出级别(全局变量)，和一个当前流的输出级别；   
+2)、日志文件的按大小自动rolling，当当前日志的大小大于1gb时自动更换一个新的logfile；  
+3)、固定的消息格式:日期/时间/线程ID/级别/正文/源文件位置(通过__FILE__、__LINE__宏);  
+
+总体设计:  
+1)、FixedLengthBuffer<int>(buffer.h),底层缓冲区的封装;  
+2)、AppendFile(fileUtile.h),标准IO写的封装，内部提供了一个64MB的缓冲区；  
+3)、LogFile(logFile.h),后端线程写和底层文件写的中间层，提供了超过一定大小自动roll一个新的日志、定期flushAppendFile中的内容到内核高速缓存页的功能;  
+4)、AsyncLog(asyncLog.h),后端写日志线程的封装，给前端提供日志信息的线程提供了一个统一的接口:AsyncLog::append(const char* msg,size_t len);内部线程不断在跑的function为后端写例程，前后端之间可以看做多生产者单消费者问题(一般不会多消费者，因为硬盘就一个，多线程还是得排队调用磁盘的硬件,这和串行没啥区别),在数据储存方面使用了双缓存区设计(实际为流动式缓冲区队列,包括三个队列，两个满队列用于copy-on-write,一个空闲队列)+copy-on-write方式来尽可能地提高前后端的并行性;  
+5)、LogStream(logStream.h),流式的日志风格，方便调用时的输出,内部重载了接收各种参数的<<操作符(主要是数字和字符串),内部包含一个4kb的缓冲区，按一条消息100bytes算，可以容纳40条连在一起的消息，足够应付日常需要；  
+6)、Logger(logger.h),实际的对外接口，用宏定义定义了各种输出级别(实际为调用LogStream的<<重载),这里还差最后一步，即将LogStream内部存储的日志消息调用AsyncLog::append来输出到日志文件，采用的方法就是在析构时进行调用；另外，在构造Logger及析构Logger时都会按固定的格式添加头尾；  
+7)、Singleton<AsyncLog>(singleton.h),关于启动日志线程，当前采取的方式是第一个调用LOG_XX的会在内部Logger的析构内通过单例模式的形式来创建一个AsyncLog日志线程对象(static variable)，此后输出日志的线程就直接取这个对象而不需要重新创建,单例内部采用的只初始化AsyncLog对象一次的解决方法是pthread_once;    

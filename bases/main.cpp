@@ -42,8 +42,12 @@ int main()
     //同下  使用绝对路径
     ifstream inFile("/home/oldhen/cpptest/miscs/open");
     vector<string> vs = getString(inFile);
-    for (auto &str : vs)
-        LOG_INFO << str;
+    int num = 100;
+    while (num--)
+    {
+        for (auto &str : vs)
+            LOG_INFO << str;
+    }
     //fopen的相对路径中的当前目录在不同的环境下是不同的
     //在命令行中直接调用可执行文件(或gdb)  相对路径的当前目录就是可执行文件所在的目录
     //但是在vscode里执行  相对路径的当前目录是工程的目录

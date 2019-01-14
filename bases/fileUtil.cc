@@ -43,8 +43,8 @@ size_t AppendFile::append(const char *msg, size_t len)
         }
         len -= writed;
         cur += writed;
-        writeBytes += writed;
     }
+    writeBytes += cur;
     return cur;
 }
 void AppendFile::flush()
