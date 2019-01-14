@@ -40,7 +40,7 @@ int main()
     LOG_INFO << "This is a log test, don't worry.";
     //LOG_FATAL << "fatal test.";
     //同下  使用绝对路径
-    ifstream inFile("/home/oldhen/cpptest/misc/open");
+    ifstream inFile("/home/oldhen/cpptest/miscs/open");
     vector<string> vs = getString(inFile);
     for (auto &str : vs)
         LOG_INFO << str;

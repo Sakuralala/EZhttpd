@@ -22,6 +22,10 @@ public:
   }
 };
 //后端日志线程的全特化单例模式;
+//TODO:这种做法的话，无法在thread启动的这个过程中进行log
+//否则会出现单线程的死锁:外面某个log启动了日志线程到这里的init,这时候pthread_once的锁还没
+//释放,而在init中run的内部进入thread.run,在某处进行log时，又会重复上述过程到pthread_once
+//然后就死锁了，第一次获取了锁的在等init完成，而第二次尝试获取锁在等锁释放，典型的单线程死锁
 template <>
 class Singleton<AsyncLog>
 {

@@ -1,3 +1,4 @@
+#include "logger.h"
 #include "asyncLog.h"
 #include "logFile.h"
 
@@ -53,6 +54,7 @@ bool AsyncLog::append(const char *message, size_t length)
     return true;
 }
 
+//FIXME:某些时候会出现没写入文件的情况
 void AsyncLog::writeToFile()
 {
     looping_ = true;
@@ -65,7 +67,9 @@ void AsyncLog::writeToFile()
         {
             MutexGuard mg(mutex_);
             if (full_.empty())
+            {
                 cond_.timedWait(DefaultWriteSeconds);
+            }
             //只有在还有剩余buffer的时候才把current也拿过来写入文件
             if (!empty_.empty())
             {
@@ -96,12 +100,23 @@ void AsyncLog::writeToFile()
         {
             MutexGuard mg(mutex_);
             for (auto &buffer : fullCopy)
+            {
+                buffer->clear();
                 empty_.emplace_back(std::move(buffer));
+            }
             fullCopy.clear();
         }
         lf.flush();
     }
-    //TODO:善后处理 把剩余的日志全部写入
+    //善后处理 把剩余的日志全部写入
+    {
+        MutexGuard mg(mutex_);
+        for (auto &buffer : full_)
+        {
+            lf.append(buffer->begin(), buffer->length());
+        }
+        lf.append(current_->begin(), current_->length());
+    }
     lf.flush();
 }
 } // namespace bases

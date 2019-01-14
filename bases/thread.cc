@@ -59,9 +59,9 @@ void Thread::run()
     if (!running_)
     {
         running_ = true;
-        if (pthread_create(&pthreadID_, nullptr, threadFuncWrapper, this))
+        if (pthread_create(&pthreadID_, nullptr, &threadFuncWrapper, this))
         {
-            LOG_FATAL << "Create thread failed.";
+            //LOG_FATAL << "Create thread failed.";
             running_ = false;
         }
         else
@@ -69,7 +69,7 @@ void Thread::run()
             //note:此处并不会丢失信号，因为countDownLatch把信号通过计数的方式保存了；
             latch_.wait();
             // std::cout << "thread " << tid_ << "started." << std::endl;
-            //FIXME:死锁了这里 
+            //FIXME:死锁了这里 单个线程自身死锁了 尝试获取pthread_once中的锁两次
             //LOG_INFO << "Sub thread " << tid_ << " created, ready to run.";
         }
     }
