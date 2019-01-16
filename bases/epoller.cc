@@ -2,7 +2,8 @@
 #include <string.h>//memset
 #include "epoller.h"
 #include "event.h"
-
+#include "logger.h"
+#include "thread.h"
 namespace event
 {
 const int InitialEventsNumber = 2048;
@@ -30,7 +31,7 @@ bool Epoller::updateEvent(Event *ev)
         ev->setOperation(EPOLL_CTL_MOD);
         if (::epoll_ctl(epollFd_, EPOLL_CTL_ADD, fd, &ee))
         {
-            //TODO:log_info<<"epoll add error occured in thread:"<<currentThreadID();
+            LOG_ERROR<<"epoll add error occured in thread:"<<bases::currentThreadID();
             return false;
         }
     }
@@ -38,7 +39,7 @@ bool Epoller::updateEvent(Event *ev)
     {
         if (::epoll_ctl(epollFd_, EPOLL_CTL_MOD, fd, &ee))
         {
-            //TODO:log_info<<"epoll mod error occured in thread:"<<currentThreadID();
+            LOG_ERROR<<"epoll mod error occured in thread:"<<bases::currentThreadID();
             return false;
         }
     }
@@ -46,7 +47,7 @@ bool Epoller::updateEvent(Event *ev)
     {
         if (::epoll_ctl(epollFd_, EPOLL_CTL_DEL, fd, &ee))
         {
-            //TODO:log_info<<"epoll del error occured in thread:"<<currentThreadID();
+            LOG_ERROR<<"epoll del error occured in thread:"<<bases::currentThreadID();
             return false;
         }
     }
@@ -64,7 +65,7 @@ int Epoller::poll(int ms, EventList &el)
     if (n == events_.size())
     {
         events_.resize(2 * events_.size());
-        //TODO:log_info<<"Epoll event list resized,current size:"<<events_.size();
+        LOG_INFO<<"Epoll event list resized,current size:"<<events_.size();
     }
     return n;
 }

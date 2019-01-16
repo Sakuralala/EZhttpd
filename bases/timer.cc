@@ -1,4 +1,3 @@
-#include "timer.h"
 #include <utility>
 #include <sys/time.h>
 #include <time.h>
@@ -6,6 +5,8 @@
 #include <algorithm>
 #include <stdio.h>  //for snprintf
 #include <string.h> //for memset
+#include "timer.h"
+#include "logger.h"
 namespace event
 {
 //周几
@@ -68,7 +69,7 @@ void TimerSet::add(const Timer &t)
 {
     if (!t.getCallback())
     {
-        //TODO:log_error<<"No timeout callback set!.";
+       LOG_ERROR<<"No timeout callback set!";
         return;
     }
     timerSet_.insert(t);

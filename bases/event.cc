@@ -1,6 +1,7 @@
 #include <sys/epoll.h>
 #include "event.h"
 #include "eventLoop.h"
+#include "logger.h"
 namespace event
 {
 //EPOLLERR、EPOLLHUP这两种类型的事件,epoll强制置位，不需要调用者手动置位
@@ -11,7 +12,7 @@ Event::Event(int fd, EventLoop *loop) : fd_(fd), operation_(-1),readyType_(0), l
 {
     if(!loop_)
     {
-        //TODO:log_error<<"No event loop for current event.";
+        LOG_FATAL<<"No event loop for current event.";
     }
     //仅工作在ET模式下
     interestedType_ |= EPOLLET;

@@ -5,6 +5,7 @@
 #include "eventLoop.h"
 #include "epoller.h"
 #include "event.h"
+#include "logger.h"
 namespace event
 {
 //当前线程的eventloop 初始为null
@@ -14,9 +15,7 @@ EventLoop::EventLoop() : looping_(false), threadID_(bases::currentThreadID()), w
 {
     if (currentThreadLoop)
     {
-        //TODO:LOG_FATAL<<"Thread:"<<threadID<<" already had a event loop:"<<currentThreadLoop;
-        //暂时未实现log相关模块，所以此处暂时只能先throw;
-        throw;
+        LOG_FATAL << "Thread:" << threadID_ << " already had a event loop:" << currentThreadLoop;
     }
     currentThreadLoop = this;
     //使能可读事件
@@ -37,9 +36,8 @@ bool EventLoop::isOwnerThread() const
 }
 void EventLoop::assertInOwnerThread()
 {
-    //TODO:log_fatal<<"Current thread:"<<currentThreadID()<<" does not own this event loop:"<<this;
     if (!isOwnerThread())
-        throw;
+        LOG_FATAL << "Current thread:" << bases::currentThreadID() << " does not own the event loop,the owner of the eventloop is thread:"<<threadID_<<".";
 }
 
 //当前线程被唤醒事件的回调
@@ -50,7 +48,7 @@ void EventLoop::readHandler()
     //TODO:封装底层的一些套接字操作
     if (n != sizeof one)
     {
-        //TODO:log_error<<"Event loop read "<<n<<" rather than 8.";
+        LOG_ERROR << "Event loop read " << n << " rather than 8.";
     }
 }
 
@@ -61,7 +59,7 @@ void EventLoop::wakeup()
     //TODO:封装底层的一些套接字操作
     if (n != sizeof one)
     {
-        //TODO:log_error<<"Event loop write"<<n<<" rather than 8.";
+        LOG_ERROR << "Event loop write" << n << " rather than 8.";
     }
 }
 void EventLoop::updateEvent(Event *ev)

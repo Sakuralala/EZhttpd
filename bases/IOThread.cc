@@ -2,6 +2,7 @@
 #include "IOThread.h"
 #include "thread.h"
 #include "eventLoop.h"
+#include "logger.h"
 namespace event
 {
 IOThread::IOThread() : Thread(std::bind(&IOThread::IOThreadFunc, this), "IO Thread"), loop_(nullptr),latch__(1)
@@ -52,7 +53,7 @@ void IOThread::IOThreadFunc()
     }
     catch (...)
     {
-        //TODO:log<<"IO thread loop error."<<endl;
+        LOG_FATAL<<"IO thread loop error.";
         throw;
     }
     loop_ = nullptr;

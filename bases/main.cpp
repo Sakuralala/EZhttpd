@@ -37,6 +37,7 @@ void logFunc(const char *msg, size_t len)
 int main()
 {
     //TODO:解决log有时候没输出的问题
+    //FIXED:貌似解决了
     LOG_INFO << "This is a log test, don't worry.";
     //LOG_FATAL << "fatal test.";
     //同下  使用绝对路径

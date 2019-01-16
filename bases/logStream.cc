@@ -24,7 +24,7 @@ size_t convert(char *buf, T val)
     if (val < 0)
         *buf++ = '-';
     //TODO:为啥要加
-    *buf = '\0';
+    //*buf = '\0';
     //std::reverse(begin, buf);
     size_t len = buf - begin;
     buf--;

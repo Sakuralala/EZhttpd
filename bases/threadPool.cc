@@ -101,7 +101,7 @@ void ThreadPool::threadFunction()
     }
     catch (...)
     {
-        //TODO: log<<"threadpool error occured."<<endl;
+        LOG_FATAL<<"threadpool error occured.";
         throw;
     }
 }
