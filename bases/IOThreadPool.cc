@@ -5,7 +5,7 @@
 #include "logger.h"
 namespace event
 {
-IOThreadPool::IOThreadPool() : tid_(bases::currentThreadID()),next_(0),started_(false){}
+IOThreadPool::IOThreadPool() : tid_(bases::currentThreadID()), next_(0), started_(false) {}
 IOThreadPool::~IOThreadPool() = default;
 void IOThreadPool::start(uint32_t num)
 {
@@ -19,7 +19,6 @@ void IOThreadPool::start(uint32_t num)
     }
     started_ = true;
     LOG_INFO << "IO thread pool started.";
-    //std::cout << "IO thread pool started." << std::endl;
 }
 void IOThreadPool::stop()
 {
@@ -31,9 +30,11 @@ void IOThreadPool::stop()
 }
 void IOThreadPool::put(Task task)
 {
-    if(tid_==bases::currentThreadID()&&started_)
+    if (tid_ == bases::currentThreadID() && started_)
     {
         loops_[next_++]->runInLoop(task);
+        if (next_ == loops_.size() )
+            next_ = 0;
     }
     else
     {
