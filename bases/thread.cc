@@ -70,6 +70,8 @@ void Thread::run()
             latch_.wait();
             // std::cout << "thread " << tid_ << "started." << std::endl;
             //FIXME:死锁了这里 单个线程自身死锁了 尝试获取pthread_once中的锁两次
+            //FIXED:这没办法，毕竟log线程也是thread，解决办法就是线程启动的流程内不进行log
+            //因为也不是什么有价值的信息；
             //LOG_INFO << "Sub thread " << tid_ << " created, ready to run.";
         }
     }
@@ -95,7 +97,7 @@ void Thread::detach()
 
 Thread::~Thread()
 {
-    detach();
-    //join();
+    //detach();
+    join();
 }
 } // namespace bases

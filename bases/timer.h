@@ -26,7 +26,7 @@ public:
   ~Timer() = default;
   uint64_t getTime() const
   {
-    return microSeconds_;
+    return milliSeconds_;
   }
   void setCallback(TimeoutCallback cb)
   {
@@ -47,7 +47,7 @@ public:
 
 private:
   //从1970.01.01开始到现在所经过的毫秒数
-  uint64_t microSeconds_;
+  uint64_t milliSeconds_;
   TimeoutCallback timeoutCallback_;
 };
 //用inline防止报重复定义的错误(因为有多个源文件包含此头文件)

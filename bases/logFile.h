@@ -28,7 +28,7 @@ class LogFile
     uint32_t cnt_;
     static const int rollSeconds = 60 * 24 * 24;
     //一个日志文件最大1g
-    static const int RollSize = 1024 * 1024 * 10;
+    static const int RollSize = 1024 * 1024 * 1024;
     Mutex mutex_;
     std::unique_ptr<AppendFile> file_;
     //新建一个日志文件

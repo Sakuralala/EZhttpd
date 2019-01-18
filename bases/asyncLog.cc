@@ -46,15 +46,16 @@ bool AsyncLog::append(const char *message, size_t length)
         }
         else
             return false;
-        //current_->append("Change to next buffer.",24);
         current_->append(message, length);
     }
-    //current_->append(message, length);
     cond_.notify();
     return true;
 }
 
 //FIXME:某些时候会出现没写入文件的情况
+//FIXED:似乎修复了，在后端写的最后退出循环时再把所有的buffer写一遍
+//FIXME:修复有些日志重复写的问题;
+//FIXED:按键盘的时候不小心按错大括号了导致逻辑不对了。。。。不是bug，改回原有的逻辑没问题了；
 void AsyncLog::writeToFile()
 {
     looping_ = true;
@@ -86,18 +87,21 @@ void AsyncLog::writeToFile()
             lf.append(buffer->begin(), buffer->length());
             //每写完一块就把空闲的放回去
             //由于是多生产者单消费者问题，所以这里可能会长时间等锁反而得不偿失
+            //结果:5.99user 4.35system 0:03.65elapsed 283%CPU (0avgtext+0avgdata 6140maxresident)k0inputs+846976outputs (0major+861minor)pagefaults 0swaps
             /*
             {
                 MutexGuard mg(mutex_);
                 buffer->clear();
                 empty_.emplace_back(std::move(buffer));
-                //等到全写完了再整体清理 pop_front会造成大量的整体移动
-                //fullCopy.pop_front();
             }
             */
         }
         //TODO:比较两种方式的效率
         //全写完了再一起放回去
+        //测试情景:4个生产者线程，man open的每个单词单独写一行；重复250次(上面的sleep被注释了)
+        //结果:6.08user 3.93system 0:03.63elapsed 275%CPU (0avgtext+0avgdata 6920maxresident)k0inputs+846976outputs (0major+1064minor)pagefaults 0swaps
+        //似乎是差不多；
+        //也达到了muduo中所说的100MB/s的要求；
         {
             MutexGuard mg(mutex_);
             for (auto &buffer : fullCopy)
@@ -110,6 +114,7 @@ void AsyncLog::writeToFile()
         fullCopy.clear();
         lf.flush();
     }
+
     //善后处理 把剩余的日志全部写入
     {
         MutexGuard mg(mutex_);

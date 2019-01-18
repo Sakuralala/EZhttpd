@@ -16,7 +16,7 @@ Timer::Timer(uint64_t secs)
 {
     struct timeval tv;
     gettimeofday(&tv, nullptr);
-    microSeconds_ = (secs + tv.tv_sec) * 1000 + tv.tv_usec / 1000;
+    milliSeconds_ = (secs + tv.tv_sec) * 1000 + tv.tv_usec / 1000;
 }
 Timer::Timer(uint64_t secs, TimeoutCallback cb) : Timer(secs)
 {
@@ -36,7 +36,7 @@ std::string Timer::format()
     char buf[64];
     memset(buf, 0, sizeof(char) * 64);
     struct tm formatedTime;
-    time_t seconds = static_cast<time_t>(microSeconds_ / 1000);
+    time_t seconds = static_cast<time_t>(milliSeconds_ / 1000);
     gmtime_r(&seconds, &formatedTime);
     snprintf(buf, sizeof(buf), "%4d:%02d:%02d %02d:%02d:%02d,%s,UTC ",
              formatedTime.tm_year + 1900, formatedTime.tm_mon + 1, formatedTime.tm_mday,
