@@ -11,7 +11,7 @@ ThreadPool::~ThreadPool()
 {
     stop();
 }
-void ThreadPool::start(int threadNum)
+void ThreadPool::run(int threadNum)
 {
     if (threadNum > 0 && !running_)
     {

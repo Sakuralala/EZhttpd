@@ -20,7 +20,7 @@ int main()
 {
     int num = 10;
     IOThreadPool iotp;
-    iotp.start(10);
+    iotp.run(10);
     while (num--)
     {
         Timer ti1(num);

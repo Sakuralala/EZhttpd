@@ -7,7 +7,7 @@ namespace event
 {
 IOThreadPool::IOThreadPool() : tid_(bases::currentThreadID()), next_(0), started_(false) {}
 IOThreadPool::~IOThreadPool() = default;
-void IOThreadPool::start(uint32_t num)
+void IOThreadPool::run(uint32_t num)
 {
     IOThreads_.reserve(num);
     loops_.reserve(num);

@@ -48,7 +48,7 @@ int main()
     //int num = -1;
     //主线程不断往taskQueue中put任务(pc的get) 且不断put随机一个string->number对，其余子线程不断get随机一个string 并返回其number
     //Thread t1(std::bind(&ProducerConsumer::put,&pc,std::ref(str)));
-    tp.start(4);
+    tp.run(4);
     while (cnt)
     {
         srandom(random());

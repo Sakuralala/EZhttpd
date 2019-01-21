@@ -17,7 +17,7 @@ public:
   //有包括在此头文件中(减少编译依赖),所以需要在源文件中写~IOThreadPool
   ~IOThreadPool();
   //启动io线程池
-  void start(uint32_t num);
+  void run(uint32_t num);
   //停止io线程池
   void stop();
   //主线程给任务

@@ -32,7 +32,7 @@ int main()
 {
    int num = 4;
     IOThreadPool iotp;
-    iotp.start(num);
+    iotp.run(num);
     while (num)
     {
         Timer ti1(num);

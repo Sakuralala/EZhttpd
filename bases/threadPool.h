@@ -20,7 +20,7 @@ public:
   //TODO:任务队列的最大值有待商榷。
   explicit ThreadPool(int qSize = 1024);
   ~ThreadPool();
-  void start(int numThreads);
+  void run(int numThreads);
   void stop(ExitMode mode = Immediately);
   Task get();
   //正如c++ primer所讲的 使用一个函数实现copy/move两种功能
