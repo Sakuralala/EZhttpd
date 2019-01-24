@@ -1,7 +1,9 @@
+#include <netinet/in.h>
+#include <arpa/inet.h>
 #include "acceptor.h"
-#include "bases/eventLoop.h"
-#include "bases/logger.h"
-#include "bases/util.h"
+#include "eventLoop.h"
+#include "logger.h"
+#include "utils.h"
 namespace net
 {
 Acceptor::Acceptor(event::EventLoop *loop)
@@ -23,9 +25,11 @@ bool Acceptor::listen(int port)
         return false;
     bases::setNonBlocking(listenFd_);
     //NOTE:don't use map_[port]=event::Event(listenFd_,loop_) since event::Event has no default ctor, however, unordered_map::operator[] needs the mapped type has default ctor.
-    map_.emplace(port, event::Event(listenFd_, loop_));
-    map_[port].setReadCallback(std::bind(&Acceptor::accept, this, listenFd_));
-    map_[port].enableRead();
+    event::Event ev(listenFd_, loop_);
+    ev.setReadCallback(std::bind(&Acceptor::accept, this, listenFd_));
+    ev.enableRead();
+    //TODO:move
+    map_.emplace(port, std::move(ev));
     return true;
 }
 //新连接到来时的回调
@@ -33,14 +37,21 @@ void Acceptor::accept(int listenFd)
 {
     loop_->assertInOwnerThread();
     struct sockaddr_in clientAddr;
+    socklen_t addrLen = 0;
     //bzero();
     //后面的标志位是为了避免两步操作破坏原子性
-    int acceptedFd = accept4(listenFd, (sockaddr *)&clientAddr, sizeof clientAddr, SOCK_NONBLOCK | SOCK_CLOEXEC);
+    int acceptedFd = accept4(listenFd, (sockaddr *)&clientAddr, &addrLen, SOCK_NONBLOCK | SOCK_CLOEXEC);
     if (acceptedFd == -1)
     {
         LOG_ERROR << "Accept failed in socket:" << listenFd << ".";
         return;
     }
+    char buf[INET_ADDRSTRLEN];
+    if (!inet_ntop(AF_INET, &clientAddr.sin_addr, buf, INET_ADDRSTRLEN))
+    {
+        LOG_ERROR << "Invalid ip address.";
+    }
+    LOG_INFO << "Client:" << buf << " connected.";
     if (onConnection_)
         onConnection_(acceptedFd, clientAddr);
 }

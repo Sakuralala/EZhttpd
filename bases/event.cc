@@ -1,24 +1,42 @@
 #include <sys/epoll.h>
+#include <unistd.h>
 #include "event.h"
 #include "eventLoop.h"
 #include "logger.h"
 namespace event
 {
 //EPOLLERR、EPOLLHUP这两种类型的事件,epoll强制置位，不需要调用者手动置位
-const int Event::WriteEvent= EPOLLOUT;
+const int Event::WriteEvent = EPOLLOUT;
 const int Event::ReadEvent = EPOLLIN | EPOLLPRI;
 //需要监控的事件对应的文件描述符，感兴趣的事件类型
-Event::Event(int fd, EventLoop *loop) : fd_(fd), operation_(-1),readyType_(0), loop_(loop)
+Event::Event(int fd, EventLoop *loop) : fd_(fd), operation_(-1), readyType_(0), loop_(loop)
 {
-    if(!loop_)
+    if (!loop_)
     {
-        LOG_FATAL<<"No event loop for current event.";
+        LOG_FATAL << "No event loop for current event.";
     }
     //仅工作在ET模式下
     interestedType_ |= EPOLLET;
 }
+Event::Event(Event &&ev)
+{
+    fd_ = ev.fd_;
+    ev.fd_ = -1;
+    operation_ = ev.operation_;
+    ev.operation_ = -1;
+    readyType_ = ev.readyType_;
+    ev.readyType_ = -1;
+    interestedType_ = ev.interestedType_;
+    ev.interestedType_ = -1;
+    loop_ = ev.loop_;
+    ev.loop_ = nullptr;
+    readCallback_ = ev.readCallback_;
+    writeCallback_ = ev.writeCallback_;
+    errorCallback_ = ev.errorCallback_;
+}
 Event::~Event()
 {
+    ::close(fd_);
 }
 //通用的调用次序:Event::enable/disable*->Event::update->EventLoop::updateEvent->Epoller::updateEvent
 void Event::update()
@@ -37,7 +55,7 @@ void Event::update()
     else
         operation_ = EPOLL_CTL_MOD;
     */
-   //另一种方式 由epoller来进行operation的更新
+    //另一种方式 由epoller来进行operation的更新
     loop_->updateEvent(this);
 }
 
@@ -51,19 +69,19 @@ void Event::remove()
 //处理相应的事件
 void Event::handleEvent()
 {
-    if(readyType_&(ReadEvent|EPOLLHUP|EPOLLRDHUP))
+    if (readyType_ & (ReadEvent | EPOLLHUP | EPOLLRDHUP))
     {
-        if(readCallback_)
+        if (readCallback_)
             readCallback_();
     }
-    else if(readyType_&WriteEvent)
+    else if (readyType_ & WriteEvent)
     {
-        if(writeCallback_)
+        if (writeCallback_)
             writeCallback_();
     }
-    else if(readyType_&EPOLLERR)
+    else if (readyType_ & EPOLLERR)
     {
-        if(errorCallback_)
+        if (errorCallback_)
             errorCallback_();
     }
 }

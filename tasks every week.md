@@ -33,6 +33,7 @@ muduo中所说的用户是指基于muduo这个库做二次开发的调用者而�
 好在muduo提供了examples,里面的例子写得非常好，也顺带学习了下原始的gdb的用法，包括打断点、输出当前堆栈信息、输出变量的信息等，主要看了的有simple中的5个例子，这几个例子也纠正了我之前的一个误区，即muduo是作为一个网络库提供给开发者进行调用的，所以它的设计初衷是让使用者调用方便，以及考虑到调用者可能会出现的各种使用情况，如生命期管理相关的，要考虑到调用者的回调中可能存在导致channel对象或其owner对象被析构并释放的行为等。另外，asio/chat这个例子我重点追踪 了TcpConnection对象的引用计数变化情况，也看到了使用smart pointer来进行对象生命期管理所带来的便利性(前提是需要知道如何避免其潜在的弊端，主要是意外延长对象的生命期)。到这里为止基本理解了为什么要用smart pointer对TcpConnection对象进行管理(当然肯定也有其他的替代方案，内存池，或者是raw pointer，如果仔细设计的话，可能也不会有问题，但是使用smart pointer的优势就是方便高效且不容易出错,raw pointer可能现在不会出错，但是后面如果进行了修改什么的出错的概率相较smart pointer会大),但是对channel对象的生命期管理还不是很理解(channel对象肯定是需要在多个上层对象中进行传递的，那么是需要在每个用到它的类中都使用shared_ptr还是只在某个类中使用)，在追踪了curl这个例子之后，终于了解了作者设计其的初衷及做法，"由channel的owner对象对其生命期进行管理",即owner对象负责Channel成员的析构操作()，curl这个例子只用到了EventLoop及Channel类，而Channel类是作为Request对象的成员并使用了shared_ptr进行包装，在新建连接创建channel对象时就调用了对应的tie方法，这样后续在事件到来调用用户的回调时就可以保证当前channel对象在函数调用栈完全弹出前不会被销毁(handleEvent会先尝试提升之前tie的weak_ptr)，从而确保了程序正确的行为。  
 那么在用到channel对象的类中及使用channel作为参数的函数都使用shared_ptr是否可行呢?考虑下通常的移除channel的流程:对端断开连接事件触发Channel::handleEvent->调用用户的读事件回调onRead->onRead中调用Channel::remove以便在当前线程的epoll对象中删除监控->onRead末尾调用shared_ptr<Channel>::reset，可以看到由于Channel对象的生命期是在unregister之后才结束的，也就是说先前在EventLoop、Poller类中的传递调用都是保证其存活的，那么何必多此一举呢？而且这种做法并没有起到延长Channel对象的效果(因为在onRead调用结束后channel已经没了,但是其函数调用栈还没结束)。  
 那将Channel对象作为其owner对象的直接成员是否可行呢？想了想似乎可行，这样Channel对象的生命期就和其owner对象一致，那么只需要做好其owner对象的生命期管理就可以保证正常的行为(TODO:)。但是这个有一个弊端，即增加了头文件依赖，暴露了内部类给用户。  
+说到底就是每次调用回调之前tie一下，保证在函数调用栈完全弹出前channel对象还在被引用即可。  
 2018.12.24-12.31  
 1、成员函数的线程安全性(即是否可以跨线程调用成员函数)  
 我觉得这得分有没有锁，如果在读写成员的时候都进行了必要的加锁操作，那么这个成员函数应该是线程安全的；  
@@ -159,4 +160,20 @@ bug:
 3)、超过大小却没有roll文件:这个其实不算bug，主要是测试的时候为了看到效果就把roll size改小了，然而一下子就写完了，1s都不到，而rollfile的名称又是时间最小到秒来的，那么两次命名的文件名一样自然就不会创建新文件了；解决方案就是把最小时间精确到us；  
 
 2019.01.21-2019.01.26  
-本周主要完成server、http处理；  
+本周主要完成server、http处理；以及接收、发送的用户态缓冲区的设计；    
+
+2019.01.23  
+1、用户态缓冲区该放哪:  
+1)、如果作为Event类的成员那么读写回调也需要一个Buffer参数用于传递消息；但是某些Event是不需要传递消息的，如Acceptor的Event成员仅仅需要监听新连接、EventLoop的Event成员仅仅需要监听唤醒事件，那么在绑定的时候buffer参数就要用_1来代替，这样一个正常的事件处理流程就为:  
+```cpp
+EventLoop::loop->Epoller::poll->Event::handle*(Buffer &)->Server::*Callback(Buffer&);
+```    
+2)、增加一层间接性:Event上层添加一个owner类Connection,这个专门用来表示建立好的连接，这里的都需要缓冲区，所以可以将缓冲区作为connection的成员,另外，这个Connetion中可以保存两端的ip:port；正常的事件处理流程为:  
+```cpp
+EventLoop::loop->Epoller::poll->Event::handle*->Connection::handle*->Connection::*Callback(Buffer &)->Server::*Callback(Buffer&);
+```  
+想了想还是第二种比较好，这也是muduo的做法。  
+
+2、缓冲区的设计，暂定为使用circular buffer,需要注意两点:  
+1)、初始的缓冲区大小；  
+2)、满了之后需要重新分配内存；    

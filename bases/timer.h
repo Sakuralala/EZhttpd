@@ -30,7 +30,7 @@ public:
   }
   void setCallback(TimeoutCallback cb)
   {
-    timeoutCallback_ = cb;
+    timeoutCallback_ = std::move(cb);
   }
   TimeoutCallback getCallback() const
   {

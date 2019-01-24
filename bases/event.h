@@ -8,11 +8,12 @@
 namespace event
 {
 class EventLoop;
-class Event
+class Event : Nocopyable
 {
   public:
     typedef std::function<void()> Callback;
     Event(int fd, EventLoop *loop);
+    Event(Event &&ev);
     ~Event();
     //处理事件的核心
     void handleEvent();
@@ -41,7 +42,7 @@ class Event
         operation_ = op;
     }
     //严格来说get*也存在race condition,有可能其他线程调用get*而owner线程正在set,不过一般而言其他线程不会进行get*操作(没啥意义)
-    EventLoop* getLoop() const
+    EventLoop *getLoop() const
     {
         return loop_;
     }
@@ -100,7 +101,7 @@ class Event
   private:
     static const int ReadEvent;
     static const int WriteEvent;
-    //TODO:当前event是否拥有fd
+    //NOTE:当前event拥有fd
     int fd_;
     /******另一种做法:使用mutex保护下面三个成员****/
     //bases::Mutex mutex_;
