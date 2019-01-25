@@ -9,6 +9,7 @@
 #include <memory>
 #include "IOThreadPool.h"
 #include "acceptor.h"
+#include "circularBuffer.h"
 namespace event
 {
 class EventLoop;
@@ -17,11 +18,15 @@ class Event;
 //struct sockaddr_in;
 namespace net
 {
+class Connection;
 class HttpRequest;
 class HttpResponse;
 class Server
 {
+  typedef std::shared_ptr<Connection> ConnectionPtr;
   typedef std::function<void()> Callback;
+  typedef std::function<void(const bases::UserBuffer &)> WriteCallback;
+  typedef std::function<void(ConnectionPtr &, const bases::UserBuffer &)> ReadCallback;
   typedef std::shared_ptr<event::Event> EventPtr;
 
 public:
@@ -31,12 +36,12 @@ public:
   void stop();
   //新连接建立的回调
   void distributeConnetion(int acceptFd, struct sockaddr_in clientAddr);
-  void setReadCallback(Callback cb)
+  void setReadCallback(ReadCallback cb)
   {
     readCallback_ = std::move(cb);
   }
 
-  void setWriteCallback(Callback cb)
+  void setWriteCallback(WriteCallback cb)
   {
     writeCallback_ = std::move(cb);
   }
@@ -54,8 +59,8 @@ private:
   std::vector<int> bindingPorts_;
   //当前连接的套接字描述符->对于的Event
   std::unordered_map<int, EventPtr> connected;
-  Callback readCallback_;
-  Callback writeCallback_;
+  readCallback readCallback_;
+  writeCallback writeCallback_;
   Callback errorCallback_;
 };
 } // namespace net

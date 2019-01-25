@@ -17,7 +17,7 @@ public:
   ~CircularBuffer() = default;
   int size() const
   {
-    if(isEmpty())
+    if (isEmpty())
       return 0;
     return (writeIndex_ - readIndex_ + buffer_.capacity()) % buffer_.capacity();
   }
@@ -29,8 +29,29 @@ public:
   {
     return buffer_.capacity();
   }
+  //读事件最终调用的回调
   int recv(int fd);
+  //上层调用者写
   int send(int fd, const char *msg, int len);
+  //写事件最终调用的回调
+  int sendRemain(int fd);
+  const char *Begin() const
+  {
+    if (isEmpty())
+      return nullptr;
+    return &*buffer_.begin() + readIndex_;
+  }
+  //方便解析http请求头 
+  const char *findCRLF() const;
+  
+  //readIndex_前进len字节
+  bool retrieve(int len) 
+  {
+    if (len > size())
+      return false;
+    readIndex_ = (readIndex_ + len) % buffer_.capacity();
+    return true;
+  }
 
 private:
   std::vector<char> buffer_;

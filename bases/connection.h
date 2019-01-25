@@ -4,7 +4,9 @@
  * 连接的抽象，主要就是Event+读写缓冲区+两端地址; 
  * **/
 #include <functional>
+#include <memory>
 #include <netinet/in.h>
+#include "circularBuffer.h"
 #include "event.h"
 namespace event
 {
@@ -12,19 +14,22 @@ class EventLoop;
 }
 namespace net
 {
-class Connection
+class Connection : std::enable_shared_from_this<Connection>
 {
-    typedef std::function<void()> Callback;
-
   public:
+    typedef std::shared_ptr<Connection> ConnectionPtr;
+    typedef std::function<void(const bases::UserBuffer &)> WriteCallback;
+    //由于读事件读完之后或者是出错后需要发送响应，需要调用Connection::send,故需要这个参数
+    typedef std::function<void(const ConnectionPtr &, const bases::UserBuffer &)> ReadCallback;
+    typedef std::function<void()> Callback;
     Connection(event::EventLoop *loop, int fd, const sockaddr_in &local, const sockaddr_in &peer);
     ~Connection();
-    void setReadCallback(Callback cb)
+    void setReadCallback(ReadCallback cb)
     {
         readCallback_ = std::move(cb);
     }
 
-    void setWriteCallback(Callback cb)
+    void setWriteCallback(WriteCallback cb)
     {
         writeCallback_ = std::move(cb);
     }
@@ -37,16 +42,18 @@ class Connection
     void handleRead();
     void handleWrite();
     void handleError();
+    void send(const char *msg, int len);
 
   private:
     event::EventLoop *loop_;
     event::Event event_;
-    //TODO:Buffer
+    bases::UserBuffer in_;
+    bases::UserBuffer out_;
     sockaddr_in localAddress_;
     sockaddr_in peerAddress_;
     //事件就绪时实际调用的回调
-    Callback readCallback_;
-    Callback writeCallback_;
+    ReadCallback readCallback_;
+    WriteCallback writeCallback_;
     Callback errorCallback_;
 };
 } // namespace net

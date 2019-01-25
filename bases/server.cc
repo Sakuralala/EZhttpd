@@ -1,7 +1,9 @@
 #include <netinet/in.h>
+#include <sys/socket.h>
 #include "server.h"
 #include "logger.h"
 #include "eventLoop.h"
+#include "connection.h"
 #define MAX_CONN 2147483647
 namespace net
 {
@@ -44,6 +46,17 @@ void Server::distributeConnetion(int acceptFd, struct sockaddr_in clientAddr)
     connected.emplace(acceptFd, ev);
     loop->runInLoop(std::bind(&event::Event::enableAll, ev.get()));
     */
+    struct sockaddr_in localAddr;
+    socklen_t localAddrLen = 0;
+    if (getsockname(acceptFd, (struct sockaddr *)&localAddr, &localAddrLen))
+    {
+        LOG_ERROR << "Get sock name error in socket:" << acceptFd;
+        return;
+    }
+    ConnectionPtr conn(new Connection(loop_, acceptFd, localAddr, clientAddr));
+    conn->setErrorCallback(errorCallback_);
+    conn->setWriteCallback(writeCallback_);
+    conn->setReadCallback(readCallback_);
 }
 void Server::run(int numThreads)
 {
