@@ -14,13 +14,14 @@ class EventLoop;
 }
 namespace net
 {
+class HttpRequest;
 class Connection : std::enable_shared_from_this<Connection>
 {
   public:
     typedef std::shared_ptr<Connection> ConnectionPtr;
     typedef std::function<void(bases::UserBuffer &)> WriteCallback;
     //由于读事件读完之后或者是出错后需要发送响应，需要调用Connection::send,故需要这个参数
-    typedef std::function<void(ConnectionPtr &, bases::UserBuffer &)> ReadCallback;
+    typedef std::function<void(const ConnectionPtr &, bases::UserBuffer &)> ReadCallback;
     typedef std::function<void()> Callback;
     Connection(event::EventLoop *loop, int fd, const sockaddr_in &local, const sockaddr_in &peer);
     ~Connection();
@@ -44,11 +45,11 @@ class Connection : std::enable_shared_from_this<Connection>
     void handleError();
     void send(const char *msg, int len);
     void close();
-    void setContext(std::shared_ptr<void> context)
+    void setContext(const std::shared_ptr<HttpRequest> &context)
     {
         context_ = context;
     }
-    std::shared_ptr<void> getContext()
+    std::shared_ptr<HttpRequest> getContext()
     {
         return context_;
     }
@@ -64,8 +65,8 @@ class Connection : std::enable_shared_from_this<Connection>
     ReadCallback readCallback_;
     WriteCallback writeCallback_;
     Callback errorCallback_;
-    //指向任意类型的实际数据，这里是HttpRequest;
-    std::shared_ptr<void> context_;
+    //TODO:改为指向任意类型
+    std::shared_ptr<HttpRequest> context_;
 };
 } // namespace net
 #endif // !__connection_h

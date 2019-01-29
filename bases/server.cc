@@ -14,7 +14,7 @@ Server::Server(event::EventLoop *loop, std::vector<int> &ports) : running_(false
     setReadCallback(std::bind(&net::Server::discardMsg, this, std::placeholders::_1, std::placeholders::_2));
 }
 Server::~Server() = default;
-void Server::discardMsg(ConnectionPtr &ptr, bases::UserBuffer &buf)
+void Server::discardMsg(const ConnectionPtr &ptr, bases::UserBuffer &buf)
 {
     ptr->send("HTTP/1.1 400 Bad Request\r\n\r\n", 29);
 }

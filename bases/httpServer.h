@@ -21,7 +21,7 @@ class HttpServer : public Server
   public:
     HttpServer(event::EventLoop *loop, std::vector<int> &ports);
     ~HttpServer();
-    void onMessage(ConnectionPtr &conn, bases::CircularBuffer &buf);
+    void onMessage(const ConnectionPtr &conn, bases::CircularBuffer &buf);
 
   private:
 };

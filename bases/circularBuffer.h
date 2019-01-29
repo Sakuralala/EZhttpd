@@ -2,6 +2,7 @@
 #define __circular_buffer_h
 //#include <memory>
 #include <vector>
+#include <string>
 /**
  * 用户态缓冲区，是一个环形的缓冲区，能够动态增长大小,以vector<char>为底层；采用环形缓冲区
  * 的优势就是能够更好地利用内存空间(主要是前面起始部分在运行过程中留下的空间)，但是缺点就是代码
@@ -38,21 +39,37 @@ public:
   int send(int fd, const char *msg, int len);
   //写事件最终调用的回调
   int sendRemain(int fd);
-  const char *Begin() const
+  const char *begin() const
   {
     if (isEmpty())
       return nullptr;
     return &*buffer_.begin() + readIndex_;
   }
-  //方便解析http请求头 
+  const char *end() const
+  {
+    if (isEmpty())
+      return nullptr;
+    return &*buffer_.begin() + writeIndex_;
+  }
+  //方便解析http请求头
   const char *findCRLF() const;
-  
+  const char *find(char ch) const;
+  int length(const char *beg, const char *end)
+  {
+    if (isEmpty())
+      return -1;
+    return (end - beg + buffer_.capacity()) % buffer_.capacity();
+  }
+  bool compare(const char *s, int len) const;
+  std::string getMsg(const char *beg, const char *end) const;
   //readIndex_前进len字节
-  bool retrieve(int len) 
+  bool retrieve(int len)
   {
     if (len > size())
       return false;
     readIndex_ = (readIndex_ + len) % buffer_.capacity();
+    if (readIndex_ >= writeIndex_)
+      readIndex_ = writeIndex_ = -1;
     return true;
   }
 

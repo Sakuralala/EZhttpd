@@ -13,6 +13,46 @@ void CircularBuffer::resize()
     std::copy(buffer_.begin(), buffer_.begin() + writeIndex_, buffer_.begin() + buffer_.capacity() / 2);
     writeIndex_ += buffer_.capacity() / 2;
 }
+std::string CircularBuffer::getMsg(const char *beg, const char *end) const
+{
+    if (beg < end)
+        return std::string(beg, end - beg);
+    else
+        return std::string(beg, &*buffer_.end() - beg) + std::string(&*buffer_.begin(), end - &*buffer_.begin());
+}
+
+bool CircularBuffer::compare(const char *s, int len) const
+{
+    if (isEmpty())
+        return false;
+    if (readIndex_ < writeIndex_)
+        return !strncmp(s, begin(), len);
+    else
+    {
+        int subLen = buffer_.capacity() - readIndex_;
+        return strncmp(s, begin(), subLen) & strncmp(s + subLen, &*buffer_.begin(), len - subLen);
+    }
+    //never go here.
+    return true;
+}
+
+const char *CircularBuffer::find(char ch) const
+{
+    if (isEmpty())
+        return nullptr;
+    if (readIndex_ < writeIndex_)
+        return std::find(begin(), end(), ch);
+    else
+    {
+        auto pos = std::find(begin(), &*buffer_.end(), ch);
+        if (pos)
+            return pos;
+        pos = std::find(&*buffer_.begin(), end(), ch);
+        if (pos)
+            return pos;
+    }
+    return nullptr;
+}
 //TODO:这里存在将数据传递给上层时的数据分段问题，即一部分在尾部，一部分在头部，那么该如何处理:
 //1.让上层进行处理，即需要先判断返回的crlf的位置和readIndex_的大小关系来决定拷贝1次还是两次；
 //2.内部处理，需要额外一次拷贝的开销；

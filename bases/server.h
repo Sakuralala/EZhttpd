@@ -27,7 +27,7 @@ public:
   typedef std::shared_ptr<Connection> ConnectionPtr;
   typedef std::function<void()> Callback;
   typedef std::function<void(bases::UserBuffer &)> WriteCallback;
-  typedef std::function<void(ConnectionPtr &, bases::UserBuffer &)> ReadCallback;
+  typedef std::function<void(const ConnectionPtr &, bases::UserBuffer &)> ReadCallback;
   typedef std::shared_ptr<event::Event> EventPtr;
 
   Server(event::EventLoop *loop, std::vector<int> &ports);
@@ -51,7 +51,7 @@ public:
     errorCallback_ = std::move(cb);
   }
   //默认读完后会将数据全部丢弃
-  void discardMsg(ConnectionPtr &ptr, bases::UserBuffer &buf);
+  void discardMsg(const ConnectionPtr &ptr, bases::UserBuffer &buf);
 
 private:
   bool running_;
