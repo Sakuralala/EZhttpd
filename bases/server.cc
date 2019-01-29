@@ -11,8 +11,13 @@ Server::Server(event::EventLoop *loop, std::vector<int> &ports) : running_(false
 {
     if (!loop_)
         LOG_FATAL << "Create server failed,event loop can't be null.";
+    setReadCallback(std::bind(&net::Server::discardMsg, this, std::placeholders::_1, std::placeholders::_2));
 }
 Server::~Server() = default;
+void Server::discardMsg(ConnectionPtr &ptr, bases::UserBuffer &buf)
+{
+    ptr->send("HTTP/1.1 400 Bad Request\r\n\r\n", 29);
+}
 //新连接建立成功后需要将其按照某种策略分配到一个sub reactor中
 void Server::distributeConnetion(int acceptFd, struct sockaddr_in clientAddr)
 {

@@ -23,13 +23,13 @@ class HttpRequest;
 class HttpResponse;
 class Server
 {
+public:
   typedef std::shared_ptr<Connection> ConnectionPtr;
   typedef std::function<void()> Callback;
-  typedef std::function<void(const bases::UserBuffer &)> WriteCallback;
-  typedef std::function<void(ConnectionPtr &, const bases::UserBuffer &)> ReadCallback;
+  typedef std::function<void(bases::UserBuffer &)> WriteCallback;
+  typedef std::function<void(ConnectionPtr &, bases::UserBuffer &)> ReadCallback;
   typedef std::shared_ptr<event::Event> EventPtr;
 
-public:
   Server(event::EventLoop *loop, std::vector<int> &ports);
   ~Server();
   void run(int numThreads);
@@ -50,6 +50,8 @@ public:
   {
     errorCallback_ = std::move(cb);
   }
+  //默认读完后会将数据全部丢弃
+  void discardMsg(ConnectionPtr &ptr, bases::UserBuffer &buf);
 
 private:
   bool running_;
@@ -59,8 +61,8 @@ private:
   std::vector<int> bindingPorts_;
   //当前连接的套接字描述符->对于的Event
   std::unordered_map<int, EventPtr> connected;
-  readCallback readCallback_;
-  writeCallback writeCallback_;
+  ReadCallback readCallback_;
+  WriteCallback writeCallback_;
   Callback errorCallback_;
 };
 } // namespace net

@@ -9,21 +9,25 @@ Connection::Connection(event::EventLoop *loop, int fd, const sockaddr_in &local,
     event_.setReadCallback(std::bind(&Connection::handleRead, this));
     event_.setWriteCallback(std::bind(&Connection::handleWrite, this));
     event_.setErrorCallback(std::bind(&Connection::handleError, this));
+    event_.enableAll();
 }
 Connection::~Connection() = default;
 void Connection::handleRead()
 {
     in_.recv(event_.getFd());
     if (readCallback_)
-        readCallback_(this->shared_from_this(), in_);
+    {
+        auto connPtr(this->shared_from_this());
+        readCallback_(connPtr, in_);
+    }
 }
+
 void Connection::handleWrite()
 {
     out_.sendRemain(event_.getFd());
     if (writeCallback_)
         writeCallback_(out_);
 }
-
 void Connection::handleError()
 {
     if (errorCallback_)
@@ -32,5 +36,10 @@ void Connection::handleError()
 void Connection::send(const char *msg, int len)
 {
     out_.send(event_.getFd(), msg, len);
+}
+//TODO:
+void Connection::close()
+{
+
 }
 } // namespace net

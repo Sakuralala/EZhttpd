@@ -136,9 +136,8 @@ int CircularBuffer::send(int fd, const char *msg, int len)
             len -= n;
         }
     }
-    if (len)
+    if (len) //把没发完的保存起来
     {
-        //把没发完的保存起来
         if (remain() < len)
             resize();
         int tmp = buffer_.capacity() - writeIndex_;
