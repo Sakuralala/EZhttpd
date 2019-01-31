@@ -10,7 +10,7 @@
  *      
  **/
 #include <unistd.h> //for uint64_t
-#include <set>
+#include <map>
 #include <string>
 #include <functional> //for std::function
 #include "nocopyable.h"
@@ -24,10 +24,12 @@ public:
   explicit Timer(uint64_t secs);
   explicit Timer(uint64_t secs, TimeoutCallback cb);
   ~Timer() = default;
+
   uint64_t getTime() const
   {
     return milliSeconds_;
   }
+  void setTime(uint64_t secs);
   void setCallback(TimeoutCallback cb)
   {
     timeoutCallback_ = std::move(cb);
@@ -38,7 +40,7 @@ public:
   }
   void timeout()
   {
-    if(timeoutCallback_)
+    if (timeoutCallback_)
       timeoutCallback_();
   }
   //返回格式化后的时间
@@ -64,7 +66,25 @@ inline uint64_t operator-(const Timer &t1, const Timer &t2)
   auto ms1 = t1.getTime(), ms2 = t2.getTime();
   return ms1 < ms2 ? 0 : (ms1 - ms2) / 1000;
 }
+//由于map的操作(默认排序、upper/lower_bound)都是按key的排序来进行比较的，所以为了方便，此处直接包装一个TimerKey,内部就是一个Timer*,
+//只不过重载了<;
+class TimerKey : Nocopyable
+{
+public:
+  TimerKey(const Timer *ptr) : timerPtr_(ptr) {}
+  ~TimerKey() = default;
+  uint64_t getTime() const
+  {
+    return timerPtr_->getTime();
+  }
 
+private:
+  const Timer *timerPtr_;
+};
+inline bool operator<(const TimerKey &tk1, const TimerKey &tk2)
+{
+  return tk1.getTime() < tk2.getTime();
+}
 class TimerSet : Nocopyable
 {
 public:
@@ -72,13 +92,16 @@ public:
   TimerSet() = default;
   ~TimerSet() = default;
   void getExpired();
-  void add(uint64_t sec,Callback cb);
+  //void add(uint64_t sec, Callback cb);
   void add(const Timer &t);
-  //void del();
+  //NOTE:需要一个删除函数，处理这种情况:对端在超时时限内又发送了新的数据，需要重置定时器
+  //所以需要一个独一无二的标示符来代表每个定时器，此处使用了timer的地址
+  void del(const Timer &);
   uint64_t getNext() const;
 
 private:
-  std::multiset<Timer> timerSet_;
+  //为什么不使用hashMap的主要原因是需要保证timer的有序性以便能够getExpired时快速删除超时的定时器
+  std::map<TimerKey, Timer> timerSet_;
 };
 } // namespace event
 #endif // !__timer_h

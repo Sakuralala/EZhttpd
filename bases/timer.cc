@@ -14,6 +14,10 @@ static const char *DayofWeek[7] = {"Monday", "Tuesday", "Wednsday", "Thursday", 
 //timernode
 Timer::Timer(uint64_t secs)
 {
+    setTime(secs);
+}
+void Timer::setTime(uint64_t secs)
+{
     struct timeval tv;
     gettimeofday(&tv, nullptr);
     milliSeconds_ = (secs + tv.tv_sec) * 1000 + tv.tv_usec / 1000;
@@ -48,31 +52,37 @@ std::string Timer::format()
 void TimerSet::getExpired()
 {
     auto cur = Timer::now();
+    TimerKey tk(&cur);
     //找到第一个大于cur的定时器
-    auto last = timerSet_.upper_bound(cur);
+    auto last = timerSet_.upper_bound(tk);
     if (last == timerSet_.begin())
         return;
 
-    std::vector<Timer> expired(timerSet_.begin(), last);
+    for (auto ite = timerSet_.begin(); ite != last; ++ite)
+        ite->second.timeout();
+
     timerSet_.erase(timerSet_.begin(), last);
-    for (auto &elem : expired)
-    {
-        elem.timeout();
-    }
 }
 
+/*
 void TimerSet::add(uint64_t secs, Callback cb)
 {
     timerSet_.insert(Timer(secs, std::move(cb)));
 }
+*/
 void TimerSet::add(const Timer &t)
 {
     if (!t.getCallback())
     {
-       LOG_ERROR<<"No timeout callback set!";
+        LOG_ERROR << "No timeout callback set!";
         return;
     }
-    timerSet_.insert(t);
+    timerSet_.emplace(TimerKey(&t), t);
+}
+
+void TimerSet::del(const Timer &t)
+{
+    timerSet_.erase(TimerKey(&t));
 }
 /*取消某个定时器 暂时用不到这个功能
 void TimerSet::del()
@@ -83,6 +93,6 @@ void TimerSet::del()
 //查看最近超时的定时器的超时时间
 uint64_t TimerSet::getNext() const
 {
-    return *timerSet_.begin() - Timer::now();
+    return timerSet_.begin()->second - Timer::now();
 }
 } // namespace event
