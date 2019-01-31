@@ -124,7 +124,8 @@ int CircularBuffer::recv(int fd)
             }
             break;
         }
-        else if (n == 0)
+        else if (n == 0) //对端关闭了写端或者直接关闭了连接，对于前者，说明请求发完了，那么正常处理即可
+                         //对于后者，此时再写会出错,所以设置一个定时器，超时直接关闭连接
         {
             LOG_INFO << "Read eof from socket:" << fd;
             break;

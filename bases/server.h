@@ -30,7 +30,7 @@ public:
   typedef std::function<void(const ConnectionPtr &, bases::UserBuffer &)> ReadCallback;
   typedef std::shared_ptr<event::Event> EventPtr;
 
-  Server(event::EventLoop *loop, std::vector<int> &ports);
+  Server(event::EventLoop *loop, const std::vector<int> &ports);
   ~Server();
   void run(int numThreads);
   void stop();

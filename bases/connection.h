@@ -5,9 +5,11 @@
  * **/
 #include <functional>
 #include <memory>
+#include <utility>
 #include <netinet/in.h>
 #include "circularBuffer.h"
 #include "event.h"
+#include "timer.h"
 namespace event
 {
 class EventLoop;
@@ -15,6 +17,7 @@ class EventLoop;
 namespace net
 {
 class HttpRequest;
+class HttpResponse;
 class Connection : std::enable_shared_from_this<Connection>
 {
   public:
@@ -44,6 +47,8 @@ class Connection : std::enable_shared_from_this<Connection>
     void handleWrite();
     void handleError();
     void send(const char *msg, int len);
+    void send(const std::string &msg);
+    void send(const HttpResponse &response);
     void close();
     void setContext(const std::shared_ptr<HttpRequest> &context)
     {
@@ -53,6 +58,12 @@ class Connection : std::enable_shared_from_this<Connection>
     {
         return context_;
     }
+    event::EventLoop *getLoop() const
+    {
+        return loop_;
+    }
+    std::pair<std::string, int> getPeerAddress() const;
+    std::pair<std::string, int> getLocalAddress() const;
 
   private:
     event::EventLoop *loop_;

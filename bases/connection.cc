@@ -1,4 +1,6 @@
+#include <arpa/inet.h>
 #include "connection.h"
+#include "httpResponse.h"
 #include "logger.h"
 namespace net
 {
@@ -12,6 +14,18 @@ Connection::Connection(event::EventLoop *loop, int fd, const sockaddr_in &local,
     event_.enableAll();
 }
 Connection::~Connection() = default;
+std::pair<std::string, int> Connection::getLocalAddress() const
+{
+    char buf[INET_ADDRSTRLEN];
+    inet_ntop(AF_INET, &localAddress_.sin_addr, buf, INET_ADDRSTRLEN);
+    return std::pair<std::string, int>(buf, ntohs(peerAddress_.sin_port));
+}
+std::pair<std::string, int> Connection::getPeerAddress() const
+{
+    char buf[INET_ADDRSTRLEN];
+    inet_ntop(AF_INET, &peerAddress_.sin_addr, buf, INET_ADDRSTRLEN);
+    return std::pair<std::string, int>(buf, ntohs(peerAddress_.sin_port));
+}
 void Connection::handleRead()
 {
     in_.recv(event_.getFd());
@@ -24,7 +38,11 @@ void Connection::handleRead()
 
 void Connection::handleWrite()
 {
-    out_.sendRemain(event_.getFd());
+    auto rc = out_.sendRemain(event_.getFd());
+    //写操作出错，有可能是对端终止了连接
+    if (rc == -1)
+        close();
+
     if (writeCallback_)
         writeCallback_(out_);
 }
@@ -37,9 +55,17 @@ void Connection::send(const char *msg, int len)
 {
     out_.send(event_.getFd(), msg, len);
 }
+void Connection::send(const std::string &msg)
+{
+    send(msg.c_str(), msg.size());
+}
+void Connection::send(const HttpResponse &response)
+{
+    ConnectionPtr conn(this->shared_from_this());
+    response.sendResponse(conn);
+}
 //TODO:
 void Connection::close()
 {
-
 }
 } // namespace net

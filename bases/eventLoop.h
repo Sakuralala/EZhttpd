@@ -48,8 +48,10 @@ public:
   void updateEvent(Event *ev);
   //定时器事件添加
   //TODO:存在重载函数的话，bind时需要显式将对应的绑定函数转换为对应要绑定的函数的函数类型的函数指针，代码比较丑陋
-  void addTimer(uint64_t secs,typename TimerSet::Callback cb);
+  //解决方案:去掉一个
+  //void addTimer(uint64_t secs,typename TimerSet::Callback cb);
   void addTimer(const Timer &t);
+  void delTimer(const Timer &t);
 
 private:
   //仅在loop()及quit()中可以读写,在quit()中读写需加锁(因为可能会跨线程)
