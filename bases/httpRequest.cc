@@ -1,27 +1,33 @@
 #include <algorithm>
 #include <string.h>
 #include "httpRequest.h"
+#include "connection.h"
 #include "logger.h"
 namespace net
 {
-bool HttpRequest::parse(bases::UserBuffer &buf)
+HttpRequest::HttpRequest(const ConnectionPtr &conn, uint64_t secs, event::Timer::TimeoutCallback cb) : status_(REQUEST_LINE),
+                                                                                                       owner_(conn), timer_(secs, std::move(cb))
+{
+}
+ParseStatus HttpRequest::parse(bases::UserBuffer &buf)
 {
     if (status_ == REQUEST_LINE)
-        parseRequestLine(buf);
+        return parseRequestLine(buf);
     else if (status_ == HEADERS)
-        parseHeader(buf);
+        return parseHeader(buf);
     else if (status_ == CONTENT)
-        parseContent(buf);
-    else
-        LOG_ERROR << "Received reduant message.";
+        return parseContent(buf);
+
+    return status_;
 }
-bool HttpRequest::parseRequestLine(bases::UserBuffer &buf)
+//解析请求行
+ParseStatus HttpRequest::parseRequestLine(bases::UserBuffer &buf)
 {
     auto pos = buf.find(' ');
     if (!pos)
-        return true;
+        return REQUEST_LINE;
     int len = buf.length(buf.begin(), pos);
-    //方法
+    /*****************解析请求方法***************************/
     if (len == 3)
     {
         if (buf.compare("GET", len))
@@ -31,7 +37,8 @@ bool HttpRequest::parseRequestLine(bases::UserBuffer &buf)
         else
         {
             LOG_ERROR << "Unknown method.";
-            return false;
+            status_ = REQUEST_LINE_ERROR;
+            return REQUEST_LINE_ERROR;
         }
     }
     else if (len == 4)
@@ -43,7 +50,8 @@ bool HttpRequest::parseRequestLine(bases::UserBuffer &buf)
         else
         {
             LOG_ERROR << "Unknown method.";
-            return false;
+            status_ = REQUEST_LINE_ERROR;
+            return REQUEST_LINE_ERROR;
         }
     }
     else if (len == 6)
@@ -53,36 +61,42 @@ bool HttpRequest::parseRequestLine(bases::UserBuffer &buf)
         else
         {
             LOG_ERROR << "Unknown method.";
-            return false;
+            status_ = REQUEST_LINE_ERROR;
+            return REQUEST_LINE_ERROR;
         }
     }
     else
     {
         LOG_ERROR << "Unknown method.";
-        return false;
+        status_ = REQUEST_LINE_ERROR;
+        return REQUEST_LINE_ERROR;
     }
     buf.retrieve(len + 1);
-    //url
+    /****************************解析url********************************/
     pos = buf.find(' ');
     if (!pos)
-        return true;
+        return REQUEST_LINE;
     //move sematic
-    url = buf.getMsg(buf.begin(), pos);
-
+    url_ = buf.getMsg(buf.begin(), pos);
+    //move sematic
+    path_ = url_.substr(url_.find('/'));
     buf.retrieve(len + 1);
-    //version
+
+    /******************************解析协议版本*****************************/
     pos = buf.find('/');
     if (!pos)
-        return true;
+        return REQUEST_LINE;
     if (!buf.compare("HTTP", 4))
     {
         LOG_ERROR << "Unknown protocol.";
-        return false;
+        status_ = REQUEST_LINE_ERROR;
+        return REQUEST_LINE_ERROR;
     }
+    //"http/"
     buf.retrieve(5);
     pos = buf.findCRLF();
     if (!pos)
-        return true;
+        return REQUEST_LINE;
     //len = buf.length(buf.begin(), pos);
     if (buf.compare("1.1", 3))
         version_ = Ver_11;
@@ -91,29 +105,43 @@ bool HttpRequest::parseRequestLine(bases::UserBuffer &buf)
     else
     {
         LOG_ERROR << "Unknown http version.";
-        return false;
+        status_ = REQUEST_LINE_ERROR;
+        return REQUEST_LINE_ERROR;
     }
-    buf.retrieve(4);
+    //example:1.1\r\n
+    buf.retrieve(5);
     status_ = HEADERS;
-    parseHeader(buf);
-    return true;
+    /**************请求行解析完成，进行请求头的解析****************************/
+    return parseHeader(buf);
 }
-bool HttpRequest::parseHeader(bases::UserBuffer &buf)
+ParseStatus HttpRequest::parseHeader(bases::UserBuffer &buf)
 {
-    auto pos = buf.findCRLF();
-    if (!pos)
-        return true;
-    auto header(buf.getMsg(buf.begin(), pos));
-    buf.retrieve(buf.length(buf.begin(), pos) + 1);
-    auto dec= header.find(':');
-    if (dec == std::string::npos)
+    while (true)
     {
-        LOG_ERROR<<"Invalid http header.";
-        return false;
+        auto pos = buf.findCRLF();
+        if (!pos)
+            return HEADERS;
+        auto header(buf.getMsg(buf.begin(), pos));
+        //+2:\r\n
+        buf.retrieve(header.length() + 2);
+        if (!header.length())
+            break;
+        auto dec = header.find(':');
+        if (dec == std::string::npos)
+        {
+            LOG_ERROR << "Invalid http header.";
+            status_ = HEADERS_ERROR;
+            return HEADERS_ERROR;
+        }
+        headers.emplace(header.substr(0, dec), header.substr(dec + 1));
     }
-    headers.emplace(header.substr(0,dec),header.substr(dec+1));
+    status_ = CONTENT;
+    return parseContent(buf);
 }
-bool HttpRequest::parseContent(bases::UserBuffer &buf)
+ParseStatus HttpRequest::parseContent(bases::UserBuffer &buf)
 {
+    //TODO:解析请求正文
+    status_ = DONE;
+    return DONE;
 }
 } // namespace net
