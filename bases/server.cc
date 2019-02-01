@@ -7,19 +7,22 @@
 #define MAX_CONN 2147483647
 namespace net
 {
-Server::Server(event::EventLoop *loop, std::vector<int> &ports) : running_(false), loop_(loop), acceptor_(loop_), bindingPorts_(ports)
+Server::Server(event::EventLoop *loop, const std::vector<int> &ports) : running_(false), loop_(loop), acceptor_(loop_), bindingPorts_(ports)
 {
     if (!loop_)
         LOG_FATAL << "Create server failed,event loop can't be null.";
-    setReadCallback(std::bind(&net::Server::discardMsg, this, std::placeholders::_1, std::placeholders::_2));
+    //setReadCallback(std::bind(&net::Server::discardMsg, this, std::placeholders::_1, std::placeholders::_2));
 }
-Server::~Server() = default;
+Server::~Server()
+{
+    stop();
+}
 void Server::discardMsg(const ConnectionPtr &ptr, bases::UserBuffer &buf)
 {
-    ptr->send("HTTP/1.1 400 Bad Request\r\n\r\n", 29);
+    ptr->send("HTTP/1.1 404 Not Found\r\n\r\n", 30);
 }
 //新连接建立成功后需要将其按照某种策略分配到一个sub reactor中
-void Server::distributeConnetion(int acceptFd, struct sockaddr_in clientAddr)
+void Server::distributeConnetion(int acceptFd, const struct sockaddr_in &clientAddr)
 {
     /**
      * 大概思路是这样:
@@ -58,10 +61,27 @@ void Server::distributeConnetion(int acceptFd, struct sockaddr_in clientAddr)
         LOG_ERROR << "Get sock name error in socket:" << acceptFd;
         return;
     }
-    ConnectionPtr conn(new Connection(loop_, acceptFd, localAddr, clientAddr));
+    ConnectionPtr conn(new Connection(loop, acceptFd, localAddr, clientAddr));
     conn->setErrorCallback(errorCallback_);
     conn->setWriteCallback(writeCallback_);
     conn->setReadCallback(readCallback_);
+    conn->setCloseCallback(std::bind(&net::Server::delConnection, this, std::placeholders::_1));
+    connected_.emplace(acceptFd, conn);
+    //修改感兴趣的事件需要在owner线程中进行，因为没有加锁
+    loop->runInLoop(std::bind(&net::Connection::enableAll, conn.get()));
+    LOG_INFO << "New connection distributed.";
+}
+//此函数一般都是在子线程close对应connection时进行回调，即由其他线程调用，为了防止race condition
+//所以需要runInLoop
+void Server::delConnection(int fd)
+{
+    loop_->runInLoop([fd, this]() { this->_delConnection(fd); });
+}
+void Server::_delConnection(int fd)
+{
+    connected_.erase(fd);
+    //QUESTION:由server进行描述符的关闭？
+    ::close(fd);
 }
 void Server::run(int numThreads)
 {
@@ -74,6 +94,9 @@ void Server::run(int numThreads)
     //1.开启监听
     for (auto port : bindingPorts_)
         acceptor_.listen(port);
+    acceptor_.setConnectionCallback(
+        std::bind(
+            &net::Server::distributeConnetion, this, std::placeholders::_1, std::placeholders::_2));
     running_ = true;
     //2.启动sub reactor
     pool_.run(numThreads);
@@ -86,5 +109,7 @@ void Server::stop()
         running_ = false;
         pool_.stop();
     }
+    for (auto &elem : connected_)
+        ::close(elem.first);
 }
 } // namespace net

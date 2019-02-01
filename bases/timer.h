@@ -68,7 +68,7 @@ inline uint64_t operator-(const Timer &t1, const Timer &t2)
 }
 //由于map的操作(默认排序、upper/lower_bound)都是按key的排序来进行比较的，所以为了方便，此处直接包装一个TimerKey,内部就是一个Timer*,
 //只不过重载了<;
-class TimerKey : Nocopyable
+class TimerKey  
 {
 public:
   TimerKey(const Timer *ptr) : timerPtr_(ptr) {}

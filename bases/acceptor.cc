@@ -20,15 +20,17 @@ bool Acceptor::listen(int port)
 {
     loop_->assertInOwnerThread();
     int listenFd_ = bases::listen(port);
+    LOG_INFO<<"Listen on file descriptor:"<<listenFd_;
     //FIXME:port可能重复
     if (listenFd_ == -1)
         return false;
     bases::setNonBlocking(listenFd_);
-    //NOTE:don't use map_[port]=event::Event(listenFd_,loop_) since event::Event has no default ctor, however, unordered_map::operator[] needs the mapped type has default ctor.
-    event::Event ev(listenFd_, loop_);
-    ev.setReadCallback(std::bind(&Acceptor::accept, this, listenFd_));
-    ev.enableRead();
-    //TODO:move
+    //NOTE:don't use map_[port]=event::Event(listenFd_,loop_)
+    //since event::Event has no default ctor, however,
+    //unordered_map::operator[] needs the mapped type has default ctor.
+    std::unique_ptr<event::Event> ev(new event::Event(listenFd_, loop_));
+    ev->setReadCallback(std::bind(&Acceptor::accept, this, listenFd_));
+    ev->enableRead();
     map_.emplace(port, std::move(ev));
     return true;
 }
@@ -36,6 +38,7 @@ bool Acceptor::listen(int port)
 void Acceptor::accept(int listenFd)
 {
     loop_->assertInOwnerThread();
+    //LOG_INFO<<"New connection established.";
     struct sockaddr_in clientAddr;
     socklen_t addrLen = 0;
     //bzero();
@@ -46,12 +49,13 @@ void Acceptor::accept(int listenFd)
         LOG_ERROR << "Accept failed in socket:" << listenFd << ".";
         return;
     }
+    LOG_INFO<<"New connected socket:"<<acceptedFd;
     char buf[INET_ADDRSTRLEN];
     if (!inet_ntop(AF_INET, &clientAddr.sin_addr, buf, INET_ADDRSTRLEN))
     {
         LOG_ERROR << "Invalid ip address.";
     }
-    LOG_INFO << "Client:" << buf << " connected.";
+    //LOG_INFO << "Client:" << buf << " connected.";
     if (onConnection_)
         onConnection_(acceptedFd, clientAddr);
 }

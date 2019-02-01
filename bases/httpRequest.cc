@@ -5,12 +5,18 @@
 #include "logger.h"
 namespace net
 {
-HttpRequest::HttpRequest(const ConnectionPtr &conn, uint64_t secs, event::Timer::TimeoutCallback cb) : status_(REQUEST_LINE),
-                                                                                                       owner_(conn), timer_(secs, std::move(cb))
+HttpRequest::HttpRequest(const ConnectionPtr &conn, uint64_t secs, const event::Timer::TimeoutCallback &cb) : status_(REQUEST_LINE),
+                                                                                                              owner_(conn),
+                                                                                                              requestTimer_(secs, cb),
+                                                                                                              aliveTimer_(0, cb)
 {
 }
+HttpRequest::~HttpRequest() = default;
 ParseStatus HttpRequest::parse(bases::UserBuffer &buf)
 {
+    //仅仅为了长连接而使用
+    if (status_ == WAIT)
+        status_ = REQUEST_LINE;
     if (status_ == REQUEST_LINE)
         return parseRequestLine(buf);
     else if (status_ == HEADERS)
@@ -23,6 +29,7 @@ ParseStatus HttpRequest::parse(bases::UserBuffer &buf)
 //解析请求行
 ParseStatus HttpRequest::parseRequestLine(bases::UserBuffer &buf)
 {
+    LOG_INFO << "Parsing request line.....";
     auto pos = buf.find(' ');
     if (!pos)
         return REQUEST_LINE;
@@ -78,6 +85,7 @@ ParseStatus HttpRequest::parseRequestLine(bases::UserBuffer &buf)
         return REQUEST_LINE;
     //move sematic
     url_ = buf.getMsg(buf.begin(), pos);
+    len = buf.length(buf.begin(), pos);
     //move sematic
     path_ = url_.substr(url_.find('/'));
     buf.retrieve(len + 1);
@@ -88,7 +96,7 @@ ParseStatus HttpRequest::parseRequestLine(bases::UserBuffer &buf)
         return REQUEST_LINE;
     if (!buf.compare("HTTP", 4))
     {
-        LOG_ERROR << "Unknown protocol.";
+        LOG_ERROR << "Unknown protocol:" << buf.getMsg(buf.begin(), pos);
         status_ = REQUEST_LINE_ERROR;
         return REQUEST_LINE_ERROR;
     }
@@ -116,12 +124,14 @@ ParseStatus HttpRequest::parseRequestLine(bases::UserBuffer &buf)
 }
 ParseStatus HttpRequest::parseHeader(bases::UserBuffer &buf)
 {
+    LOG_INFO << "Parsing header.....";
     while (true)
     {
         auto pos = buf.findCRLF();
         if (!pos)
             return HEADERS;
         auto header(buf.getMsg(buf.begin(), pos));
+        LOG_INFO << "Header:" << header << ",length:" << header.length() << "\n";
         //+2:\r\n
         buf.retrieve(header.length() + 2);
         if (!header.length())
@@ -133,7 +143,8 @@ ParseStatus HttpRequest::parseHeader(bases::UserBuffer &buf)
             status_ = HEADERS_ERROR;
             return HEADERS_ERROR;
         }
-        headers.emplace(header.substr(0, dec), header.substr(dec + 1));
+        
+        headers_.emplace(header.substr(0, dec), header.substr(dec + 1));
     }
     status_ = CONTENT;
     return parseContent(buf);
@@ -143,5 +154,10 @@ ParseStatus HttpRequest::parseContent(bases::UserBuffer &buf)
     //TODO:解析请求正文
     status_ = DONE;
     return DONE;
+}
+void HttpRequest::resetRequest()
+{
+    headers_.clear();
+    status_ = WAIT;
 }
 } // namespace net

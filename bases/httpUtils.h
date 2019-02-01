@@ -26,6 +26,7 @@ enum HttpVersion
 extern const char *VersionString[2];
 enum ParseStatus
 {
+    WAIT,//在长连接的情况下，方便判断当前是否为新来的请求的起始部分，以便删除定时器
     REQUEST_LINE,
     HEADERS,
     CONTENT,

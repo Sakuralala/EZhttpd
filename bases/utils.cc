@@ -41,7 +41,7 @@ int listen(int port)
         LOG_ERROR << "Bind socket error:" << strerror(errno);
         return -1;
     }
-    if (listen(listenFd_) == -1)
+    if (::listen(listenFd_,2048) == -1)
     {
         LOG_ERROR << "Listen socket error:" << strerror(errno);
         return -1;

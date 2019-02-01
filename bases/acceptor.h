@@ -7,6 +7,7 @@
 #include <functional>
 #include <utility>
 #include <unordered_map>
+#include <memory>
 #include "event.h"
 namespace event
 {
@@ -20,7 +21,7 @@ class Acceptor
 {
     //typedef std::vector<event::Event> BindingEventList;
     typedef std::function<void(int,struct sockaddr_in)> ConnectionCallback;
-    typedef std::unordered_map< int, event::Event> BindingMap;
+    typedef std::unordered_map< int, std::unique_ptr<event::Event>> BindingMap;
 
   public:
     Acceptor(event::EventLoop *loop);

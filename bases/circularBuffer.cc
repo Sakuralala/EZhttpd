@@ -17,10 +17,15 @@ std::string CircularBuffer::getMsg(const char *beg, const char *end) const
 {
     if (beg < end)
         return std::string(beg, end - beg);
+    else if (beg == end)
+        return "";
     else
         return std::string(beg, &*buffer_.end() - beg) + std::string(&*buffer_.begin(), end - &*buffer_.begin());
 }
-
+std::string CircularBuffer::getAll() const
+{
+    return getMsg(begin(), end());
+}
 bool CircularBuffer::compare(const char *s, int len) const
 {
     if (isEmpty())
@@ -131,9 +136,11 @@ int CircularBuffer::recv(int fd)
             break;
         }
         //n>0
-        LOG_INFO << "Read " << n << " bytes from socket:" << fd;
         writeIndex_ = (writeIndex_ + n) % buffer_.capacity();
         total += n;
+        LOG_INFO << "Read " << n << " bytes from socket:" << fd
+                 << ",message:\n"
+                 << getAll();
     }
     return total;
 }
@@ -171,7 +178,8 @@ int CircularBuffer::send(int fd, const char *msg, int len)
                 LOG_ERROR << "Write returned 0 in socket:" << fd;
                 return -1;
             }
-            LOG_INFO << "Write " << n << " bytes to socket:" << fd;
+            LOG_INFO << "Write " << n << " bytes to socket:" << fd << ",message:\n"
+                     << msg;
             total += n;
             msg += n;
             len -= n;

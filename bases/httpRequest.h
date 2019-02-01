@@ -16,7 +16,7 @@ typedef std::shared_ptr<Connection> ConnectionPtr;
 class HttpRequest
 {
   public:
-    HttpRequest(const ConnectionPtr &conn, uint64_t secs, event::Timer::TimeoutCallback cb);
+    HttpRequest(const ConnectionPtr &conn, uint64_t secs, const event::Timer::TimeoutCallback &cb);
     ~HttpRequest();
     ParseStatus parse(bases::UserBuffer &buf);
     std::string status2String() const
@@ -26,9 +26,13 @@ class HttpRequest
 
     std::string getHeader(const std::string &str)
     {
-        if (headers.count(str))
-            return headers[str];
+        if (headers_.count(str))
+            return headers_[str];
         return "";
+    }
+    ParseStatus getStatus() const
+    {
+        return status_;
     }
     HttpVersion getVersion() const
     {
@@ -38,15 +42,25 @@ class HttpRequest
     {
         return path_;
     }
-    const event::Timer &getTimer() const
+    const event::Timer &getRequestTimer() const
     {
-        return timer_;
+        return requestTimer_;
     }
-    void setTimer(uint64_t secs)
+    void setRequestTimer(uint64_t secs)
     {
-        timer_.setTime(secs);
+        requestTimer_.setTime(secs);
+    }
+    const event::Timer &getAliveTimer() const
+    {
+        return aliveTimer_;
+    }
+    void setAliveTimer(uint64_t secs)
+    {
+        aliveTimer_.setTime(secs);
     }
 
+    //重置http请求，方便后续复用
+    void resetRequest();
   private:
     std::string path_;
     std::string url_;
@@ -55,7 +69,7 @@ class HttpRequest
     //当前解析状态
     ParseStatus status_;
     //头部
-    std::unordered_map<std::string, std::string> headers;
+    std::unordered_map<std::string, std::string> headers_;
     //正文
     std::string content_;
     ParseStatus parseRequestLine(bases::UserBuffer &buf);
@@ -64,7 +78,9 @@ class HttpRequest
     //方便请求找到其上层connection对象
     std::weak_ptr<Connection> owner_;
     //每个请求需要一个定时器以便超时关闭连接
-    event::Timer timer_;
+    event::Timer requestTimer_;
+    //长连接定时器
+    event::Timer aliveTimer_;
 };
 } // namespace net
 

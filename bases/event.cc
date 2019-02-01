@@ -36,7 +36,7 @@ Event::Event(Event &&ev)
 }
 Event::~Event()
 {
-    ::close(fd_);
+    //::close(fd_);
 }
 //通用的调用次序:Event::enable/disable*->Event::update->EventLoop::updateEvent->Epoller::updateEvent
 void Event::update()
@@ -74,12 +74,12 @@ void Event::handleEvent()
         if (readCallback_)
             readCallback_();
     }
-    else if (readyType_ & WriteEvent)
+    if (readyType_ & WriteEvent)
     {
         if (writeCallback_)
             writeCallback_();
     }
-    else if (readyType_ & EPOLLERR)
+    if (readyType_ & EPOLLERR)
     {
         if (errorCallback_)
             errorCallback_();

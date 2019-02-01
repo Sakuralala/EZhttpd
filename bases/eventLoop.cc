@@ -109,8 +109,10 @@ void EventLoop::loop()
     while (looping_)
     {
         int n = poller_->poll(WaitMs, readyList_);
+        //LOG_INFO << "New events ready,number:" << n;
         if (n)
         {
+            //LOG_INFO << "New events ready,number:" <<n;
             for (auto eventPtr : readyList_)
                 eventPtr->handleEvent();
             readyList_.clear();

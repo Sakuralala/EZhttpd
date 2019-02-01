@@ -47,15 +47,16 @@ void IOThread::IOThreadFunc()
     //解决方法：修改countdownLatch底层wait，在cnt>0时才wait;修改countDown,在cnt<=0时均进行notify;
     //后续，想了一下，觉得信号量不太符合这里的意思，最后还是改为了使用两个countdownLatch
     latch__.countdown();
-    try
-    {
+    //try
+    //{
         loop_->loop();
-    }
+    //}
+    /*
     catch (...)
     {
         LOG_FATAL<<"IO thread loop error.";
-        throw;
     }
+    */
     loop_ = nullptr;
 }
 } // namespace event

@@ -62,6 +62,7 @@ public:
   }
   bool compare(const char *s, int len) const;
   std::string getMsg(const char *beg, const char *end) const;
+  std::string getAll() const;
   //readIndex_前进len字节
   bool retrieve(int len)
   {

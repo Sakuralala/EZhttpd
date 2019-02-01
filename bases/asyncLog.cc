@@ -4,7 +4,7 @@
 
 namespace bases
 {
-std::string LogPath = "/home/oldhen/cpptest/logfile/";
+std::string LogPath = "/home/oldhen/logfile/";
 AsyncLog::AsyncLog(const std::string &pathname) : pathName_(pathname), thread_(std::bind(&AsyncLog::writeToFile, this), "Log thread"), latch_(1), mutex_(), cond_(mutex_), looping_(false), current_(new LogBuffer), empty_(MaxNumber - 1)
 {
     full_.reserve(MaxNumber);

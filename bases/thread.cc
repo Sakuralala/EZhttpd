@@ -36,14 +36,16 @@ void *threadFuncWrapper(void *args)
     //std::cout << "Sub thread " << t->tid_ << " created,ready to run." << std::endl;
     //一个隐蔽的错误，LOG_INFO不能在这个函数里出现
     t->latch_.countdown();
-    try
-    {
+    //try
+    //{
         t->func_();
-    }
+    //}
+    /*
     catch (...)
     {
         throw;
     }
+    */
     return nullptr;
 }
 Thread::Thread(const threadFunc &tf, const std::string &name)

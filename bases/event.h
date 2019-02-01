@@ -101,7 +101,7 @@ class Event : Nocopyable
   private:
     static const int ReadEvent;
     static const int WriteEvent;
-    //NOTE:当前event拥有fd
+    //NOTE:当前event并不拥有fd
     int fd_;
     /******另一种做法:使用mutex保护下面三个成员****/
     //bases::Mutex mutex_;

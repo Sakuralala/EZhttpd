@@ -64,18 +64,19 @@ void HttpResponse::constructResponse(const std::string &path)
     responseLine_ += std::to_string(responseCode_);
     responseLine_ += ' ';
     responseLine_ += responseCodes_[responseCode_];
+    responseLine_ += "\r\n";
     //响应头
     headers_.emplace("Server: EZHttpd\r\n");
     headers_.emplace("Date: " + event::Timer(0).format() + "\r\n");
     headers_.emplace("Content-Length: " + std::to_string(content_.size()) + "\r\n");
     headers_.emplace("Content-Type: text/html\r\n");
 }
-void HttpResponse::sendResponse(ConnectionPtr &conn) const
+void HttpResponse::sendResponse(const ConnectionPtr &conn) const
 {
     conn->send(responseLine_);
     for (auto &header : headers_)
         conn->send(header);
-
+    conn->send("\r\n");
     if (content_.size())
         conn->send(content_);
     //conn->send("\r\n");

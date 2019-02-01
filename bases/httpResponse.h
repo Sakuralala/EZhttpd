@@ -18,7 +18,7 @@ public:
   HttpResponse(HttpVersion ver, const std::string &path = "not_found.html");
   HttpResponse(HttpVersion ver, int responseCode = HTTP_OK);
   ~HttpResponse();
-  void sendResponse(ConnectionPtr &conn) const;
+  void sendResponse(const ConnectionPtr &conn) const;
 
 private:
   int responseCode_;
