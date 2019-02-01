@@ -143,8 +143,20 @@ ParseStatus HttpRequest::parseHeader(bases::UserBuffer &buf)
             status_ = HEADERS_ERROR;
             return HEADERS_ERROR;
         }
-        
-        headers_.emplace(header.substr(0, dec), header.substr(dec + 1));
+        //FIXME:可能存在空格
+        auto n1 = dec-1;
+        for (; n1 > 0; --n1)
+        {
+            if (header[n1] != ' ')
+                break;
+        }
+        auto n2 = dec+1;
+        for (; n2 < header.size(); ++n2)
+        {
+            if(header[n2]!=' ')
+            break;
+        }
+        headers_.emplace(header.substr(0, n1+1), header.substr(n2));
     }
     status_ = CONTENT;
     return parseContent(buf);
