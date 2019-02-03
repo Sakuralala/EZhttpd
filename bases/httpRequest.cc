@@ -29,7 +29,7 @@ ParseStatus HttpRequest::parse(bases::UserBuffer &buf)
 //解析请求行
 ParseStatus HttpRequest::parseRequestLine(bases::UserBuffer &buf)
 {
-    LOG_INFO << "Parsing request line.....";
+    //LOG_INFO << "Parsing request line.....";
     auto pos = buf.find(' ');
     if (!pos)
         return REQUEST_LINE;
@@ -43,7 +43,7 @@ ParseStatus HttpRequest::parseRequestLine(bases::UserBuffer &buf)
             method_ = PUT;
         else
         {
-            LOG_ERROR << "Unknown method.";
+            LOG_ERROR << "Unknown method." << buf.getMsg(buf.begin(), pos);
             status_ = REQUEST_LINE_ERROR;
             return REQUEST_LINE_ERROR;
         }
@@ -56,7 +56,7 @@ ParseStatus HttpRequest::parseRequestLine(bases::UserBuffer &buf)
             method_ = POST;
         else
         {
-            LOG_ERROR << "Unknown method.";
+            LOG_ERROR << "Unknown method." << buf.getMsg(buf.begin(), pos);
             status_ = REQUEST_LINE_ERROR;
             return REQUEST_LINE_ERROR;
         }
@@ -67,14 +67,14 @@ ParseStatus HttpRequest::parseRequestLine(bases::UserBuffer &buf)
             method_ = DELETE;
         else
         {
-            LOG_ERROR << "Unknown method.";
+            LOG_ERROR << "Unknown method:" << buf.getMsg(buf.begin(), pos);
             status_ = REQUEST_LINE_ERROR;
             return REQUEST_LINE_ERROR;
         }
     }
     else
     {
-        LOG_ERROR << "Unknown method.";
+        LOG_ERROR << "Unknown method." << buf.getMsg(buf.begin(), pos);
         status_ = REQUEST_LINE_ERROR;
         return REQUEST_LINE_ERROR;
     }
@@ -84,7 +84,15 @@ ParseStatus HttpRequest::parseRequestLine(bases::UserBuffer &buf)
     if (!pos)
         return REQUEST_LINE;
     //move sematic
+    //FIXME:keep-alive情况下，并发量一上来会导致解析出错，url变为GET
+    //经排查发现是connection的buffer没有重置；后续发现buffer内部处理有问题，
+    //简单来说，我把vector.size()和vector.capacity()搞混了
     url_ = buf.getMsg(buf.begin(), pos);
+    //LOG_INFO << "URL:" << url_;
+    if (url_ == "GET")
+    {
+        LOG_ERROR << "method:" << method_ << ", total message:" << buf.getAll();
+    }
     len = buf.length(buf.begin(), pos);
     //move sematic
     path_ = url_.substr(url_.find('/'));
@@ -124,14 +132,14 @@ ParseStatus HttpRequest::parseRequestLine(bases::UserBuffer &buf)
 }
 ParseStatus HttpRequest::parseHeader(bases::UserBuffer &buf)
 {
-    LOG_INFO << "Parsing header.....";
+    //LOG_INFO << "Parsing header.....";
     while (true)
     {
         auto pos = buf.findCRLF();
         if (!pos)
             return HEADERS;
         auto header(buf.getMsg(buf.begin(), pos));
-        LOG_INFO << "Header:" << header << ",length:" << header.length() << "\n";
+        //LOG_INFO << "Header:" << header << ",length:" << header.length() << "\n";
         //+2:\r\n
         buf.retrieve(header.length() + 2);
         if (!header.length())
@@ -144,19 +152,21 @@ ParseStatus HttpRequest::parseHeader(bases::UserBuffer &buf)
             return HEADERS_ERROR;
         }
         //FIXME:可能存在空格
-        auto n1 = dec-1;
+        //FIXED:删除了可能多余的空格
+        //TODO:使用stl内置的find_if算法
+        auto n1 = dec - 1;
         for (; n1 > 0; --n1)
         {
             if (header[n1] != ' ')
                 break;
         }
-        auto n2 = dec+1;
+        auto n2 = dec + 1;
         for (; n2 < header.size(); ++n2)
         {
-            if(header[n2]!=' ')
-            break;
+            if (header[n2] != ' ')
+                break;
         }
-        headers_.emplace(header.substr(0, n1+1), header.substr(n2));
+        headers_.emplace(header.substr(0, n1 + 1), header.substr(n2));
     }
     status_ = CONTENT;
     return parseContent(buf);

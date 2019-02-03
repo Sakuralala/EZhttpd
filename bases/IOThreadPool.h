@@ -22,10 +22,15 @@ public:
   void stop();
   //主线程给任务
   void put(Task task);
-  EventLoop* getNextLoop() const
+  EventLoop *getNextLoop()
   {
-    if(started_)
-      return loops_[next_];
+    if (started_)
+    {
+      EventLoop *ret = loops_[next_++];
+      if (next_ == loops_.size())
+        next_ = 0;
+      return ret;
+    }
     return nullptr;
   }
 

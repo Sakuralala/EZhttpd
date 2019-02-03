@@ -185,3 +185,15 @@ EventLoop::loop->Epoller::poll->Event::handle*->Connection::handle*->Connection:
 
 2019.01.31  
 1、大多数实现中，errno是线程安全的，因为它是thread-local变量；  
+
+2019.02.02  
+1、webbench压测的奇怪现象:测1000个并发，最后结果却只有几十个成功，可是又没有失败的，看了日志，发现很早就处理完这几个请求了，后面就没了？？？  
+2、改变并发数到100左右，固定报段错误？？   
+3、初始化了event的interestedType_成员后，现在write固定报EPIPE错误？用ab测就是段错误？？？     
+4、SIGPIPE错误应该是客户端主动关闭了连接？？因为根据日志及gdb：服务端第一次write正常返回，但之后会收到RST响应，这个时候再写的话就会收到SIG_PIPE信号。   
+解决办法就是在开头就忽略sigpipe信号。  
+5、关闭连接的bug:如何保证在发完用户缓冲区的数据后再关闭连接？  
+6、关闭连接时，connection的引用计数已经没了。应该没有问题，在最后才删除map中的引用，反正调用栈已经结束了；    
+7、注意EPOLLHUP事件的处理,根据man手册: Note that when reading from a channel such as a pipe or a stream socket, this event merely indicates that the peer closed its end
+of the channel.  Subsequent reads from the channel will return 0 (end of file) only after all outstanding data in the channel has been consumed. 
+所以我们需要先读完数据，才能执行连接的关闭操作；  

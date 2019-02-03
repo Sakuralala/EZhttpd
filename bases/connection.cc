@@ -2,16 +2,20 @@
 #include "eventLoop.h"
 #include "connection.h"
 #include "httpResponse.h"
+#include "httpRequest.h"
 #include "logger.h"
 namespace net
 {
-Connection::Connection(event::EventLoop *loop, int fd, const sockaddr_in &local, const sockaddr_in &peer) : loop_(loop), event_(fd, loop), localAddress_(local), peerAddress_(peer)
+Connection::Connection(event::EventLoop *loop, int fd,
+                       const sockaddr_in &local, const sockaddr_in &peer) : state_(CONNECTED),
+                                                                            loop_(loop), event_(fd, loop), localAddress_(local), peerAddress_(peer)
 {
     if (!loop)
         LOG_FATAL << "Event loop can't be null.";
     event_.setReadCallback(std::bind(&Connection::handleRead, this));
     event_.setWriteCallback(std::bind(&Connection::handleWrite, this));
     event_.setErrorCallback(std::bind(&Connection::handleError, this));
+    event_.setCloseCallback(std::bind(&Connection::handleClose, this));
     //event_.enableAll();
 }
 Connection::~Connection() = default;
@@ -31,9 +35,12 @@ void Connection::handleRead()
 {
     int rc = in_.recv(event_.getFd());
     if (rc == -1)
-        close();
+        handleClose();
+    //对端关闭或半关闭了连接
+    if (rc == 0)
+        state_ = DISCONNECTING;
     //LOG_INFO << "Received " << rc << " bytes.";
-    if (readCallback_)
+    if (rc && readCallback_)
         readCallback_(shared_from_this(), in_);
 }
 
@@ -43,10 +50,15 @@ void Connection::handleWrite()
     auto rc = out_.sendRemain(event_.getFd());
     //写操作出错，有可能是对端终止了连接
     if (rc == -1)
-        close();
+        handleClose();
 
     if (writeCallback_)
         writeCallback_(out_);
+    if (state_ == DISCONNECTING && out_.isEmpty())
+    {
+        //LOG_INFO << "Disconnecting,close connection.";
+        handleClose();
+    }
 }
 void Connection::handleError()
 {
@@ -54,17 +66,17 @@ void Connection::handleError()
         errorCallback_();
 }
 //以下三个为发送响应的函数  并不是写事件回调
-void Connection::send(const char *msg, int len)
+int Connection::send(const char *msg, int len)
 {
-    out_.send(event_.getFd(), msg, len);
+    return out_.send(event_.getFd(), msg, len);
 }
-void Connection::send(const std::string &msg)
+int Connection::send(const std::string &msg)
 {
-    send(msg.c_str(), msg.size());
+    return send(msg.c_str(), msg.size());
 }
-void Connection::send(const HttpResponse &response)
+int Connection::send(const HttpResponse &response)
 {
-    response.sendResponse(shared_from_this());
+    return response.sendResponse(shared_from_this());
     //LOG_INFO<<"Response send completed.";
 }
 void Connection::enableAll()
@@ -72,15 +84,28 @@ void Connection::enableAll()
     loop_->assertInOwnerThread();
     event_.enableAll();
 }
-//TODO:关闭连接
-void Connection::close()
+void Connection::handleClose()
 {
     loop_->assertInOwnerThread();
-    //event_.disableAll();
-    //QUESTION:如果epoll把当前就绪的事件放入到rdlist后刚好进行remove操作，那么会如何？
-    event_.remove();
-    if (closeCallback_)
-        closeCallback_(event_.getFd());
+    //ref:2  map_+here
+    //LOG_INFO << "Current reference count:" << shared_from_this().use_count();
+    //防止已经close了连接
+    //FIXME:防止定时器回调重复close
+    if (state_ != DISCONNECTED)
+    {
+        state_ = DISCONNECTED;
+        event_.disableAll();
+        //QUESTION:如果epoll把当前就绪的事件放入到rdlist后刚好进行remove操作，那么会如何？
+        event_.remove();
+        //FIXED:删除定时器防止后续重复close
+        if (context_)
+        {
+            loop_->delTimer(context_->getRequestTimer());
+            loop_->delTimer(context_->getAliveTimer());
+        }
+        if (closeCallback_)
+            closeCallback_(event_.getFd());
+    }
 }
 
 } // namespace net

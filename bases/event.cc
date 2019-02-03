@@ -9,7 +9,8 @@ namespace event
 const int Event::WriteEvent = EPOLLOUT;
 const int Event::ReadEvent = EPOLLIN | EPOLLPRI;
 //需要监控的事件对应的文件描述符，感兴趣的事件类型
-Event::Event(int fd, EventLoop *loop) : fd_(fd), operation_(-1), readyType_(0), loop_(loop)
+Event::Event(int fd, EventLoop *loop) : fd_(fd), operation_(-1), readyType_(0),
+                                        interestedType_(0), loop_(loop)
 {
     if (!loop_)
     {
@@ -69,7 +70,19 @@ void Event::remove()
 //处理相应的事件
 void Event::handleEvent()
 {
-    if (readyType_ & (ReadEvent | EPOLLHUP | EPOLLRDHUP))
+    //FIXME:EPOLLHUP事件的处理 从man epoll_ctl可知，这个事件仅仅表示对端关闭了连接
+    //我们还需要先把对端在关闭连接之前发送的数据读完才行 这个时候才能关闭连接
+    if ((readyType_ & EPOLLHUP) && !(readyType_ & EPOLLIN))
+    {
+        if (closeCallback_)
+            closeCallback_();
+    }
+    if (readyType_ & EPOLLERR)
+    {
+        if (errorCallback_)
+            errorCallback_();
+    }
+    if (readyType_ & (ReadEvent | EPOLLRDHUP))
     {
         if (readCallback_)
             readCallback_();
@@ -78,11 +91,6 @@ void Event::handleEvent()
     {
         if (writeCallback_)
             writeCallback_();
-    }
-    if (readyType_ & EPOLLERR)
-    {
-        if (errorCallback_)
-            errorCallback_();
     }
 }
 } // namespace event

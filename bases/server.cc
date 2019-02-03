@@ -7,7 +7,7 @@
 #define MAX_CONN 2147483647
 namespace net
 {
-Server::Server(event::EventLoop *loop, const std::vector<int> &ports) : running_(false), loop_(loop), acceptor_(loop_), bindingPorts_(ports)
+Server::Server(event::EventLoop *loop, const std::vector<int> &ports) : running_(false), total_(0), loop_(loop), acceptor_(loop_), bindingPorts_(ports)
 {
     if (!loop_)
         LOG_FATAL << "Create server failed,event loop can't be null.";
@@ -43,6 +43,8 @@ void Server::distributeConnetion(int acceptFd, const struct sockaddr_in &clientA
      * 实际应用层的server，负责实际的处理工作；
      * **/
     loop_->assertInOwnerThread();
+    total_ += 1;
+    LOG_INFO << "Total connection:" << total_;
     auto loop = pool_.getNextLoop();
     /*
     EventPtr ev(new event::Event(acceptFd, loop));
@@ -61,6 +63,7 @@ void Server::distributeConnetion(int acceptFd, const struct sockaddr_in &clientA
         LOG_ERROR << "Get sock name error in socket:" << acceptFd;
         return;
     }
+    //ref:1
     ConnectionPtr conn(new Connection(loop, acceptFd, localAddr, clientAddr));
     conn->setErrorCallback(errorCallback_);
     conn->setWriteCallback(writeCallback_);
@@ -69,20 +72,28 @@ void Server::distributeConnetion(int acceptFd, const struct sockaddr_in &clientA
     connected_.emplace(acceptFd, conn);
     //修改感兴趣的事件需要在owner线程中进行，因为没有加锁
     loop->runInLoop(std::bind(&net::Connection::enableAll, conn.get()));
-    LOG_INFO << "New connection distributed.";
+    //LOG_INFO << "New connection distributed.";
 }
 //此函数一般都是在子线程close对应connection时进行回调，即由其他线程调用，为了防止race condition
 //所以需要runInLoop
 void Server::delConnection(int fd)
 {
-    loop_->runInLoop([fd, this]() { this->_delConnection(fd); });
+    //loop_->runInLoop([fd, this]() { this->_delConnection(fd); });
+    loop_->runInLoop(std::bind(&net::Server::_delConnection, this, fd));
 }
 void Server::_delConnection(int fd)
 {
-    connected_.erase(fd);
     //QUESTION:由server进行描述符的关闭？
-    ::close(fd);
+    //ANSWER:暂时先这样
+    if (::close(fd))
+        LOG_ERROR << "Close fd:" << fd << " error:" << strerror(errno);
+    else
+        LOG_INFO << "Close fd:" << fd;
+    //ref:1 没问题 反正close之后就要析构connection了
+    //LOG_INFO << "Current reference count:" << connected_[fd].use_count();
+    connected_.erase(fd);
 }
+
 void Server::run(int numThreads)
 {
     loop_->assertInOwnerThread();

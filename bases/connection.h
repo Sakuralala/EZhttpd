@@ -18,6 +18,12 @@ namespace net
 {
 class HttpRequest;
 class HttpResponse;
+enum ConnectionState
+{
+    CONNECTED,
+    DISCONNECTING,
+    DISCONNECTED
+};
 class Connection : public std::enable_shared_from_this<Connection>
 {
   public:
@@ -51,10 +57,10 @@ class Connection : public std::enable_shared_from_this<Connection>
     void handleRead();
     void handleWrite();
     void handleError();
-    void send(const char *msg, int len);
-    void send(const std::string &msg);
-    void send(const HttpResponse &response);
-    void close();
+    void handleClose();
+    int send(const char *msg, int len);
+    int send(const std::string &msg);
+    int send(const HttpResponse &response);
     void setContext(const std::shared_ptr<HttpRequest> &context)
     {
         context_ = context;
@@ -70,8 +76,14 @@ class Connection : public std::enable_shared_from_this<Connection>
     void enableAll();
     std::pair<std::string, int> getPeerAddress() const;
     std::pair<std::string, int> getLocalAddress() const;
+    void resetBuffer()
+    {
+        in_.reset();
+        out_.reset();
+    }
 
   private:
+    ConnectionState state_;
     event::EventLoop *loop_;
     event::Event event_;
     bases::UserBuffer in_;

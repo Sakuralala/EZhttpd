@@ -58,6 +58,7 @@ public:
   void _delConnection(int fd);
 private:
   bool running_;
+  long long total_;
   event::EventLoop *loop_;
   event::IOThreadPool pool_;
   Acceptor acceptor_;

@@ -24,23 +24,31 @@ void Timer::setTime(uint64_t secs)
 }
 Timer::Timer(uint64_t secs, TimeoutCallback cb) : Timer(secs)
 {
-    //for this reason:"an initializer for a delegating constructor must appear alone",I put it here.
+    //for this reason:
+    //"an initializer for a delegating constructor must appear alone",I put it here.
     timeoutCallback_ = std::move(cb);
 }
 //获取当前时间
 Timer Timer::now()
 {
-    struct timeval tv;
-    gettimeofday(&tv, nullptr);
-    Timer ret(static_cast<uint64_t>(tv.tv_sec * 1000 + tv.tv_usec / 1000));
-    return ret;
+    return Timer(0);
 }
-std::string Timer::format()
+void Timer::timeout()
+{
+    //LOG_INFO << "Timeout, executing callback....";
+    if (timeoutCallback_)
+        timeoutCallback_();
+}
+std::string Timer::format() const
+{
+    return format(milliSeconds_);
+}
+std::string Timer::format(uint64_t millisecs) 
 {
     char buf[64];
     memset(buf, 0, sizeof(char) * 64);
     struct tm formatedTime;
-    time_t seconds = static_cast<time_t>(milliSeconds_ / 1000);
+    time_t seconds = static_cast<time_t>(millisecs / 1000);
     gmtime_r(&seconds, &formatedTime);
     snprintf(buf, sizeof(buf), "%4d:%02d:%02d %02d:%02d:%02d,%s,UTC ",
              formatedTime.tm_year + 1900, formatedTime.tm_mon + 1, formatedTime.tm_mday,
@@ -57,9 +65,12 @@ void TimerSet::getExpired()
     auto last = timerSet_.upper_bound(tk);
     if (last == timerSet_.begin())
         return;
-
+    //LOG_INFO << "Current time:" << cur.format();
     for (auto ite = timerSet_.begin(); ite != last; ++ite)
+    {
+        //LOG_INFO << "Timer:" << ite->second.format() << " timeout.";
         ite->second.timeout();
+    }
 
     timerSet_.erase(timerSet_.begin(), last);
 }
@@ -77,6 +88,7 @@ void TimerSet::add(const Timer &t)
         LOG_ERROR << "No timeout callback set!";
         return;
     }
+    //LOG_INFO << "Add timer:" << t.getTime() << " to timerset.";
     timerSet_.emplace(TimerKey(&t), t);
 }
 
@@ -84,12 +96,6 @@ void TimerSet::del(const Timer &t)
 {
     timerSet_.erase(TimerKey(&t));
 }
-/*取消某个定时器 暂时用不到这个功能
-void TimerSet::del()
-{
-
-}
-*/
 //查看最近超时的定时器的超时时间
 uint64_t TimerSet::getNext() const
 {

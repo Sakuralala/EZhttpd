@@ -33,6 +33,10 @@ class Event : Nocopyable
     {
         errorCallback_ = std::move(cb);
     }
+    void setCloseCallback(Callback cb)
+    {
+        closeCallback_ = std::move(cb);
+    }
     void setReadyType(int rt)
     {
         readyType_ = rt;
@@ -118,6 +122,8 @@ class Event : Nocopyable
     Callback readCallback_;
     Callback writeCallback_;
     Callback errorCallback_;
+    //这个是为了方便EPOLLHUP事件就绪时方便关闭连接
+    Callback closeCallback_;
     //TODO:buffer
     /************************以下为内部调用*******************************************/
     //在所属的eventloop对应的io线程中的epoll对象中增加、修改、删除对自身的监控

@@ -15,6 +15,7 @@ std::unordered_map<int, std::string> HttpResponse::responseCodes_ =
 const std::string HttpResponse::basePath_ = "/home/oldhen/httptest/";
 
 HttpResponse::HttpResponse(HttpVersion ver, const std::string &path) : responseCode_(HTTP_OK),
+
                                                                        responseLine_(VersionString[ver])
 {
     constructResponse(path);
@@ -48,6 +49,7 @@ void HttpResponse::constructResponse(const std::string &path)
     std::ifstream inFile(basePath_ + path);
     if (!inFile)
     {
+        LOG_ERROR << "Resource " << basePath_ + path << " not found.";
         responseCode_ = HTTP_NOT_FOUND;
         inFile.clear();
         inFile.open(basePath_ + "not_found.html");
@@ -69,16 +71,33 @@ void HttpResponse::constructResponse(const std::string &path)
     headers_.emplace("Server: EZHttpd\r\n");
     headers_.emplace("Date: " + event::Timer(0).format() + "\r\n");
     headers_.emplace("Content-Length: " + std::to_string(content_.size()) + "\r\n");
-    headers_.emplace("Content-Type: text/html\r\n");
+    headers_.emplace("Content-Type: text/plain\r\n");
 }
-void HttpResponse::sendResponse(const ConnectionPtr &conn) const
+int HttpResponse::sendResponse(const ConnectionPtr &conn) const
 {
-    conn->send(responseLine_);
+    int total = 0, n = 0;
+    if ((n = conn->send(responseLine_)) == -1)
+        return -1;
+    total += n;
+    //conn->send("\r\n",2);
     for (auto &header : headers_)
-        conn->send(header);
-    conn->send("\r\n");
+    {
+        if ((n = conn->send(header)) == -1)
+            return -1;
+        total += n;
+    }
+    if ((n = conn->send("\r\n")) == -1)
+        return -1;
+    total += n;
     if (content_.size())
-        conn->send(content_);
-    //conn->send("\r\n");
+    {
+        if ((n = conn->send(content_)) == -1)
+            return -1;
+    }
+    if ((n = conn->send("\r\n")) == -1)
+        return -1;
+    total += n;
+
+    return total;
 }
 } // namespace net

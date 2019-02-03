@@ -20,7 +20,7 @@ bool Acceptor::listen(int port)
 {
     loop_->assertInOwnerThread();
     int listenFd_ = bases::listen(port);
-    LOG_INFO<<"Listen on file descriptor:"<<listenFd_;
+    LOG_INFO << "Listen on file descriptor:" << listenFd_;
     //FIXME:port可能重复
     if (listenFd_ == -1)
         return false;
@@ -38,10 +38,8 @@ bool Acceptor::listen(int port)
 void Acceptor::accept(int listenFd)
 {
     loop_->assertInOwnerThread();
-    //LOG_INFO<<"New connection established.";
     struct sockaddr_in clientAddr;
     socklen_t addrLen = 0;
-    //bzero();
     //后面的标志位是为了避免两步操作破坏原子性
     int acceptedFd = accept4(listenFd, (sockaddr *)&clientAddr, &addrLen, SOCK_NONBLOCK | SOCK_CLOEXEC);
     if (acceptedFd == -1)
@@ -49,13 +47,12 @@ void Acceptor::accept(int listenFd)
         LOG_ERROR << "Accept failed in socket:" << listenFd << ".";
         return;
     }
-    LOG_INFO<<"New connected socket:"<<acceptedFd;
+    LOG_INFO << "New connected socket:" << acceptedFd;
     char buf[INET_ADDRSTRLEN];
     if (!inet_ntop(AF_INET, &clientAddr.sin_addr, buf, INET_ADDRSTRLEN))
     {
         LOG_ERROR << "Invalid ip address.";
     }
-    //LOG_INFO << "Client:" << buf << " connected.";
     if (onConnection_)
         onConnection_(acceptedFd, clientAddr);
 }

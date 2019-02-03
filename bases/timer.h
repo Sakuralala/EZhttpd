@@ -38,13 +38,10 @@ public:
   {
     return timeoutCallback_;
   }
-  void timeout()
-  {
-    if (timeoutCallback_)
-      timeoutCallback_();
-  }
+  void timeout();
   //返回格式化后的时间
-  std::string format();
+  std::string format() const;
+  static std::string format(uint64_t millisecs);
   static Timer now();
 
 private:

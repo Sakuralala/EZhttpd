@@ -9,10 +9,16 @@ namespace bases
 {
 void CircularBuffer::resize()
 {
-    buffer_.reserve(buffer_.capacity() * 2);
-    std::copy(buffer_.begin(), buffer_.begin() + writeIndex_, buffer_.begin() + buffer_.capacity() / 2);
-    writeIndex_ += buffer_.capacity() / 2;
+    LOG_INFO << "Resized.";
+    std::vector<char> buffer;
+    buffer.reserve(buffer_.capacity() * 2);
+    memcpy(&*buffer.begin(), begin(), buffer_.capacity() - readIndex_);
+    memcpy(&*buffer.begin() + buffer_.capacity() - readIndex_, &*buffer_.begin(), readIndex_);
+    readIndex_ = 0;
+    writeIndex_ = buffer_.capacity();
+    buffer_.swap(buffer);
 }
+//FIXME:大小检查
 std::string CircularBuffer::getMsg(const char *beg, const char *end) const
 {
     if (beg < end)
@@ -20,7 +26,8 @@ std::string CircularBuffer::getMsg(const char *beg, const char *end) const
     else if (beg == end)
         return "";
     else
-        return std::string(beg, &*buffer_.end() - beg) + std::string(&*buffer_.begin(), end - &*buffer_.begin());
+        return std::string(beg, &*buffer_.begin() + buffer_.capacity() - beg) +
+               std::string(&*buffer_.begin(), end - &*buffer_.begin());
 }
 std::string CircularBuffer::getAll() const
 {
@@ -49,7 +56,7 @@ const char *CircularBuffer::find(char ch) const
         return std::find(begin(), end(), ch);
     else
     {
-        auto pos = std::find(begin(), &*buffer_.end(), ch);
+        auto pos = std::find(begin(), &*buffer_.begin() + buffer_.capacity(), ch);
         if (pos)
             return pos;
         pos = std::find(&*buffer_.begin(), end(), ch);
@@ -74,15 +81,16 @@ const char *CircularBuffer::findCRLF() const
     }
     else //2.wr
     {
-        auto ite = std::find(buffer_.begin() + readIndex_, buffer_.end(), '\r');
-        if (ite == buffer_.end())
+        auto ite = std::find(buffer_.begin() + readIndex_,
+                             buffer_.begin() + buffer_.capacity(), '\r');
+        if (ite == buffer_.begin() + buffer_.capacity())
         {
             ite = std::find(buffer_.begin(), buffer_.begin() + writeIndex_, '\r');
             //这种情况下消息被分割为不相邻的两部分了
             if (ite < buffer_.begin() + writeIndex_ - 1 && *(ite + 1) == '\n')
                 return &*ite;
         }
-        else if (ite == buffer_.end() - 1)
+        else if (ite == buffer_.begin() + buffer_.capacity() - 1)
         {
             if (writeIndex_ && *buffer_.begin() == '\n')
                 return &*ite;
@@ -110,10 +118,12 @@ int CircularBuffer::recv(int fd)
         if (writeIndex_ >= readIndex_)
         {
             //NOTE:新版的STL中vector的迭代器不再是普通指针，而是normal_iterator类
+            //LOG_INFO << "Try to read " << buffer_.capacity() - writeIndex_ << " bytes.";
             n = ::read(fd, &*buffer_.begin() + writeIndex_, buffer_.capacity() - writeIndex_);
         }
         else
         {
+            //LOG_INFO << "Try to read " << readIndex_ - writeIndex_ << " bytes.";
             n = ::read(fd, &*buffer_.begin() + writeIndex_, readIndex_ - writeIndex_);
         }
         if (n == -1)
@@ -132,15 +142,15 @@ int CircularBuffer::recv(int fd)
         else if (n == 0) //对端关闭了写端或者直接关闭了连接，对于前者，说明请求发完了，那么正常处理即可
                          //对于后者，此时再写会出错,所以设置一个定时器，超时直接关闭连接
         {
-            LOG_INFO << "Read eof from socket:" << fd;
+            LOG_INFO << "Peer closed connection, socket:" << fd;
             break;
         }
         //n>0
         writeIndex_ = (writeIndex_ + n) % buffer_.capacity();
         total += n;
-        LOG_INFO << "Read " << n << " bytes from socket:" << fd
-                 << ",message:\n"
-                 << getAll();
+        LOG_INFO << "Read " << n << " bytes from socket:" << fd;
+                 //<< ",message:\n"
+                 //<< getAll();
     }
     return total;
 }
@@ -178,8 +188,8 @@ int CircularBuffer::send(int fd, const char *msg, int len)
                 LOG_ERROR << "Write returned 0 in socket:" << fd;
                 return -1;
             }
-            LOG_INFO << "Write " << n << " bytes to socket:" << fd << ",message:\n"
-                     << msg;
+            LOG_INFO << "Write " << n << " bytes to socket:" << fd; //<< ",message:\n"
+                                                                    //<< msg;
             total += n;
             msg += n;
             len -= n;

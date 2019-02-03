@@ -22,6 +22,6 @@ Logger::~Logger()
 }
 std::string Logger::formatTime()
 {
-    return event::Timer(0).format();
+    return event::Timer::now().format();
 }
 } // namespace bases

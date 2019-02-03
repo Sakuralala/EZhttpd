@@ -17,7 +17,10 @@ private:
   static const int InitialSize = 8192;
 
 public:
-  CircularBuffer() : buffer_(InitialSize, 0), readIndex_(-1), writeIndex_(-1) {}
+  CircularBuffer() : readIndex_(-1), writeIndex_(-1)
+  {
+    buffer_.reserve(InitialSize);
+  }
   ~CircularBuffer() = default;
   int size() const
   {
@@ -39,6 +42,14 @@ public:
   int send(int fd, const char *msg, int len);
   //写事件最终调用的回调
   int sendRemain(int fd);
+  bool isFull() const
+  {
+    return readIndex_ != -1 && readIndex_ == writeIndex_;
+  }
+  bool isEmpty() const
+  {
+    return readIndex_ == -1;
+  }
   const char *begin() const
   {
     if (isEmpty())
@@ -66,12 +77,18 @@ public:
   //readIndex_前进len字节
   bool retrieve(int len)
   {
-    if (len > size())
+    //FIXME:不是size()而是remain()
+    //FIXED:above
+    if (len > remain())
       return false;
     readIndex_ = (readIndex_ + len) % buffer_.capacity();
     if (readIndex_ >= writeIndex_)
       readIndex_ = writeIndex_ = -1;
     return true;
+  }
+  void reset()
+  {
+    readIndex_ = writeIndex_ = -1;
   }
 
 private:
@@ -80,14 +97,6 @@ private:
   //为空时置均为-1
   int readIndex_;
   int writeIndex_;
-  bool isFull() const
-  {
-    return readIndex_ != -1 && readIndex_ == writeIndex_;
-  }
-  bool isEmpty() const
-  {
-    return readIndex_ == writeIndex_;
-  }
   void resize();
 };
 typedef CircularBuffer UserBuffer;
