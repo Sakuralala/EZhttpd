@@ -41,21 +41,24 @@ void Acceptor::accept(int listenFd)
     struct sockaddr_in clientAddr;
     socklen_t addrLen = sizeof(clientAddr);
     //后面的标志位是为了避免两步操作破坏原子性
-    int acceptedFd = accept4(listenFd, (sockaddr *)&clientAddr, &addrLen, SOCK_NONBLOCK | SOCK_CLOEXEC);
-    if (acceptedFd == -1)
+    while (true)
     {
-        LOG_ERROR << "Accept failed in socket:" << listenFd << ".";
-        return;
+        int acceptedFd = accept4(listenFd, (sockaddr *)&clientAddr, &addrLen, SOCK_NONBLOCK | SOCK_CLOEXEC);
+        if (acceptedFd == -1)
+        {
+            LOG_ERROR << "Accept failed in socket:" << listenFd << ".";
+            return;
+        }
+        char buf[INET_ADDRSTRLEN];
+        if (!inet_ntop(AF_INET, &clientAddr.sin_addr, buf, INET_ADDRSTRLEN))
+        {
+            LOG_ERROR << "Invalid ip address.";
+        }
+        //FIXME:此处显示的端口号和netstat/lsof命令显示的不一致
+        //FIXED:addrLen需要传入确定的值
+        LOG_WARN << "New :" << buf << ":" << ntohs(clientAddr.sin_port);
+        if (onConnection_)
+            onConnection_(acceptedFd, clientAddr);
     }
-    char buf[INET_ADDRSTRLEN];
-    if (!inet_ntop(AF_INET, &clientAddr.sin_addr, buf, INET_ADDRSTRLEN))
-    {
-        LOG_ERROR << "Invalid ip address.";
-    }
-    //FIXME:此处显示的端口号和netstat/lsof命令显示的不一致
-    //FIXED:addrLen需要传入确定的值
-    LOG_WARN << "New :" << buf << ":" << ntohs(clientAddr.sin_port);
-    if (onConnection_)
-        onConnection_(acceptedFd, clientAddr);
 }
 } // namespace net

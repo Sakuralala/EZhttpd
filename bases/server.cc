@@ -44,7 +44,7 @@ void Server::distributeConnetion(int acceptFd, const struct sockaddr_in &clientA
      * **/
     loop_->assertInOwnerThread();
     total_ += 1;
-    LOG_INFO << "Total connection:" << total_;
+    LOG_WARN << "Total connection:" << total_;
     auto loop = pool_.getNextLoop();
     /*
     EventPtr ev(new event::Event(acceptFd, loop));

@@ -23,6 +23,7 @@ void HttpServer::onMessage(const ConnectionPtr &conn, bases::UserBuffer &buf)
         LOG_ERROR << "No event loop owns this connection,closed.";
         //服务端主动关闭连接
         conn->handleClose();
+        return;
     }
     std::shared_ptr<HttpRequest> req = conn->getContext();
     //首先创建一个http request请求的上下文
@@ -58,7 +59,11 @@ void HttpServer::onMessage(const ConnectionPtr &conn, bases::UserBuffer &buf)
         currentLoop->delTimer(req->getRequestTimer());
         //400:bad request
         if (conn->send(HttpResponse(req->getVersion(), HTTP_BAD_REQUEST)) == -1)
+        {
             conn->handleClose();
+            return;
+        }
+        conn->setState(DISCONNECTING);
         req.reset();
         //conn->handleClose();
     }
@@ -72,7 +77,11 @@ void HttpServer::onMessage(const ConnectionPtr &conn, bases::UserBuffer &buf)
         //TODO:构造响应 200 400 404 408
         //DONE:完成
         if (conn->send(HttpResponse(req->getVersion(), requestPath)) == -1)
+        {
             conn->handleClose();
+            return;
+        }
+        conn->setState(DISCONNECTING);
         if (req->getHeader("Connection") != "Keep-Alive" &&
             req->getHeader("Connection") != "keep-alive")
         {

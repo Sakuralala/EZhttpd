@@ -65,6 +65,10 @@ class Connection : public std::enable_shared_from_this<Connection>
     {
         context_ = context;
     }
+    void setState(ConnectionState state)
+    {
+        state_ = state;
+    }
     std::shared_ptr<HttpRequest> getContext()
     {
         return context_;
