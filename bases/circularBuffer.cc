@@ -178,7 +178,7 @@ int CircularBuffer::send(int fd, const char *msg, int len)
                 }
                 else
                 {
-                    LOG_ERROR << "Write error:" << strerror(errno) << " in socket:" << fd;
+                    //LOG_ERROR << "Write error:" << strerror(errno) << " in socket:" << fd;
                     return -1;
                 }
                 break;
@@ -233,7 +233,7 @@ int CircularBuffer::sendRemain(int fd)
             }
             else
             {
-                LOG_ERROR << "Write error:" << strerror(errno) << " in socket:" << fd;
+                //LOG_ERROR << "Write error:" << strerror(errno) << " in socket:" << fd;
                 return -1;
             }
             break;

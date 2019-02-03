@@ -24,7 +24,7 @@ class Logger
     {
         return stream_;
     }
-    static LogLevel getLevel() 
+    static LogLevel getLevel()
     {
         return globalLevel;
     }
@@ -42,16 +42,18 @@ class Logger
     std::string formatTime();
 };
 } // namespace bases
-#define LOG_DEBUG                               \
+#define LOG_DEBUG                                            \
     if (bases::Logger::getLevel() <= bases::LogLevel::DEBUG) \
     bases::Logger(__FILE__, __LINE__, bases::LogLevel::DEBUG).stream()
-#define LOG_INFO                               \
+#define LOG_INFO                                            \
     if (bases::Logger::getLevel() <= bases::LogLevel::INFO) \
     bases::Logger(__FILE__, __LINE__, bases::LogLevel::INFO).stream()
-#define LOG_NOTICE                               \
+#define LOG_NOTICE                                            \
     if (bases::Logger::getLevel() <= bases::LogLevel::NOTICE) \
     bases::Logger(__FILE__, __LINE__, bases::LogLevel::NOTICE).stream()
-#define LOG_WARN bases::Logger(__FILE__, __LINE__, bases::LogLevel::WARN).stream()
+#define LOG_WARN                                            \
+    if (bases::Logger::getLevel() <= bases::LogLevel::WARN) \
+    bases::Logger(__FILE__, __LINE__, bases::LogLevel::WARN).stream()
 #define LOG_ERROR bases::Logger(__FILE__, __LINE__, bases::LogLevel::ERROR).stream()
 #define LOG_FATAL bases::Logger(__FILE__, __LINE__, bases::LogLevel::FATAL).stream()
 #endif //  __logger_h!

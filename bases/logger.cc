@@ -6,7 +6,7 @@
 #include "singleton.h"
 namespace bases
 {
-LogLevel globalLevel = LogLevel::WARN;
+LogLevel globalLevel = LogLevel::ERROR;
 static const char *levelStr[] = {"DEBUG", "INFO", "NOTICE", "WARN", "ERROR", "FATAL"};
 Logger::Logger(const char *full_file_path, int line, LogLevel level) : sourceFile_(full_file_path), line_(line), level_(level)
 {

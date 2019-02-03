@@ -46,7 +46,7 @@ void Acceptor::accept(int listenFd)
         int acceptedFd = accept4(listenFd, (sockaddr *)&clientAddr, &addrLen, SOCK_NONBLOCK | SOCK_CLOEXEC);
         if (acceptedFd == -1)
         {
-            LOG_ERROR << "Accept failed in socket:" << listenFd << ".";
+            //LOG_ERROR << "Accept failed in socket:" << listenFd << ".";
             return;
         }
         char buf[INET_ADDRSTRLEN];
