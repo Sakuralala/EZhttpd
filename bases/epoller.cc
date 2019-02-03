@@ -31,7 +31,7 @@ bool Epoller::updateEvent(Event *ev)
         ev->setOperation(EPOLL_CTL_MOD);
         if (::epoll_ctl(epollFd_, EPOLL_CTL_ADD, fd, &ee))
         {
-            LOG_ERROR << "epoll add error:"<<strerror(errno);
+            LOG_ERROR << "epoll add error:" << strerror(errno);
             return false;
         }
         //LOG_INFO << "Add event to epoll.";
@@ -40,7 +40,7 @@ bool Epoller::updateEvent(Event *ev)
     {
         if (::epoll_ctl(epollFd_, EPOLL_CTL_MOD, fd, &ee))
         {
-            LOG_ERROR << "epoll mod error:"<<strerror(errno);
+            LOG_ERROR << "epoll mod error:" << strerror(errno);
             return false;
         }
     }
@@ -48,7 +48,7 @@ bool Epoller::updateEvent(Event *ev)
     {
         if (::epoll_ctl(epollFd_, EPOLL_CTL_DEL, fd, &ee))
         {
-            LOG_ERROR << "epoll delete error:"<<strerror(errno);
+            LOG_ERROR << "epoll delete error:" << strerror(errno);
             return false;
         }
     }
@@ -57,6 +57,7 @@ bool Epoller::updateEvent(Event *ev)
 int Epoller::poll(int ms, EventList &el)
 {
     int n = epoll_wait(epollFd_, &*events_.begin(), events_.size(), ms);
+    //LOG_WARN << "Wake up.";
     for (int i = 0; i < n; ++i)
     {
         el.push_back(static_cast<Event *>(events_[i].data.ptr));

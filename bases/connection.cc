@@ -19,17 +19,18 @@ Connection::Connection(event::EventLoop *loop, int fd,
     //event_.enableAll();
 }
 Connection::~Connection() = default;
-std::pair<std::string, int> Connection::getLocalAddress() const
+std::pair<std::string, uint16_t> Connection::getLocalAddress() const
 {
     char buf[INET_ADDRSTRLEN];
     inet_ntop(AF_INET, &localAddress_.sin_addr, buf, INET_ADDRSTRLEN);
-    return std::pair<std::string, int>(buf, ntohs(peerAddress_.sin_port));
+    return std::pair<std::string, uint16_t>(buf, ntohs(peerAddress_.sin_port));
 }
-std::pair<std::string, int> Connection::getPeerAddress() const
+std::pair<std::string, uint16_t> Connection::getPeerAddress() const
 {
     char buf[INET_ADDRSTRLEN];
     inet_ntop(AF_INET, &peerAddress_.sin_addr, buf, INET_ADDRSTRLEN);
-    return std::pair<std::string, int>(buf, ntohs(peerAddress_.sin_port));
+    //都是网络字节序的
+    return std::pair<std::string, uint16_t>(buf, ntohs(peerAddress_.sin_port));
 }
 void Connection::handleRead()
 {

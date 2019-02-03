@@ -57,7 +57,7 @@ void Server::distributeConnetion(int acceptFd, const struct sockaddr_in &clientA
     loop->runInLoop(std::bind(&event::Event::enableAll, ev.get()));
     */
     struct sockaddr_in localAddr;
-    socklen_t localAddrLen = 0;
+    socklen_t localAddrLen = sizeof(localAddr);
     if (getsockname(acceptFd, (struct sockaddr *)&localAddr, &localAddrLen))
     {
         LOG_ERROR << "Get sock name error in socket:" << acceptFd;
@@ -72,7 +72,10 @@ void Server::distributeConnetion(int acceptFd, const struct sockaddr_in &clientA
     connected_.emplace(acceptFd, conn);
     //修改感兴趣的事件需要在owner线程中进行，因为没有加锁
     loop->runInLoop(std::bind(&net::Connection::enableAll, conn.get()));
-    //LOG_INFO << "New connection distributed.";
+    auto peer = conn->getPeerAddress();
+    auto local = conn->getLocalAddress();
+    //LOG_WARN << "New connection distributed from: "
+    //        << peer.first << ":" << peer.second << " to :" << local.first << ":" << local.second;
 }
 //此函数一般都是在子线程close对应connection时进行回调，即由其他线程调用，为了防止race condition
 //所以需要runInLoop
@@ -88,7 +91,7 @@ void Server::_delConnection(int fd)
     if (::close(fd))
         LOG_ERROR << "Close fd:" << fd << " error:" << strerror(errno);
     else
-        LOG_INFO << "Close fd:" << fd;
+        LOG_WARN << "Close fd:" << fd;
     //ref:1 没问题 反正close之后就要析构connection了
     //LOG_INFO << "Current reference count:" << connected_[fd].use_count();
     connected_.erase(fd);

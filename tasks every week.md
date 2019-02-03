@@ -197,3 +197,7 @@ EventLoop::loop->Epoller::poll->Event::handle*->Connection::handle*->Connection:
 7、注意EPOLLHUP事件的处理,根据man手册: Note that when reading from a channel such as a pipe or a stream socket, this event merely indicates that the peer closed its end
 of the channel.  Subsequent reads from the channel will return 0 (end of file) only after all outstanding data in the channel has been consumed. 
 所以我们需要先读完数据，才能执行连接的关闭操作；  
+8、最新的问题，压测后就无法接受新连接，通过gdb和日志可以判断当前程序在正常运行，epoll_wait能够正常返回；然后第二次压测会报"无法连接服务端"的错误；后续：用netstat发现很多处于CLOSE_WAIT状态的连接，即服务端这边没关？？      
+后续：发现日志里建立的连接和netstat输出的连接不一致，两者不相交；       
+9、显示的两端地址和netstat的完全不一样？？？  
+已修复：调用inet_ntop或者getsockname时传入的长度值写成0了。。。      

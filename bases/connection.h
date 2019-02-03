@@ -74,8 +74,8 @@ class Connection : public std::enable_shared_from_this<Connection>
         return loop_;
     }
     void enableAll();
-    std::pair<std::string, int> getPeerAddress() const;
-    std::pair<std::string, int> getLocalAddress() const;
+    std::pair<std::string, uint16_t> getPeerAddress() const;
+    std::pair<std::string, uint16_t> getLocalAddress() const;
     void resetBuffer()
     {
         in_.reset();
