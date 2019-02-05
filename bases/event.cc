@@ -10,7 +10,7 @@ const int Event::WriteEvent = EPOLLOUT;
 const int Event::ReadEvent = EPOLLIN | EPOLLPRI;
 //需要监控的事件对应的文件描述符，感兴趣的事件类型
 Event::Event(int fd, EventLoop *loop) : fd_(fd), operation_(-1), readyType_(0),
-                                        interestedType_(0), loop_(loop)
+                                        interestedType_(0), loop_(loop), tied_(false)
 {
     if (!loop_)
     {
@@ -66,12 +66,33 @@ void Event::remove()
     operation_ = EPOLL_CTL_DEL;
     loop_->updateEvent(this);
 }
-
+void Event::tie(const std::shared_ptr<void> &owner)
+{
+    loop_->assertInOwnerThread();
+    tied_ = true;
+    owner_ = owner;
+}
 //处理相应的事件
 void Event::handleEvent()
 {
+    //网络事件强制需要tie
+    if (tied_)
+    {
+        std::shared_ptr<void> guard(owner_.lock());
+        if (guard)
+        {
+            _handleEvent();
+        }
+    }
+    else//监听、wakeup事件是不需要tie的，因为它们不对应一个Connection对象
+    {
+        _handleEvent();
+    }
+}
+void Event::_handleEvent()
+{
     //FIXME:EPOLLHUP事件的处理 从man epoll_ctl可知，这个事件仅仅表示对端关闭了连接
-    //我们还需要先把对端在关闭连接之前发送的数据读完才行 这个时候才能关闭连接
+    //FIXED:我们还需要先把对端在关闭连接之前发送的数据读完才行 这个时候才能关闭连接
     if ((readyType_ & EPOLLHUP) && !(readyType_ & EPOLLIN))
     {
         if (closeCallback_)

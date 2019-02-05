@@ -34,37 +34,49 @@ std::pair<std::string, uint16_t> Connection::getPeerAddress() const
 }
 void Connection::handleRead()
 {
-    int rc = in_.recv(event_.getFd());
-    if (rc == -1)
-        handleClose();
-    //对端关闭或半关闭了连接
-    if (rc == 0)
-        state_ = DISCONNECTING;
-    //LOG_INFO << "Received " << rc << " bytes.";
-    if (rc && readCallback_)
-        readCallback_(shared_from_this(), in_);
+    if (state_ == CONNECTED)
+    {
+        int rc = in_.recv(event_.getFd());
+        if (rc == -1)
+            handleClose();
+        //对端关闭或半关闭了连接
+        if (rc == 0)
+            state_ = DISCONNECTING;
+        //LOG_INFO << "Received " << rc << " bytes.";
+        if (rc && readCallback_)
+            readCallback_(shared_from_this(), in_);
+    }
 }
 
 void Connection::handleWrite()
 {
-    //LOG_INFO<<"Write event ready.";
-    auto rc = out_.sendRemain(event_.getFd());
-    //写操作出错，有可能是对端终止了连接
-    if (rc == -1)
-        handleClose();
-
-    if (writeCallback_)
-        writeCallback_(out_);
-    if (state_ == DISCONNECTING && out_.isEmpty())
+    if (state_ != DISCONNECTED)
     {
-        //LOG_INFO << "Disconnecting,close connection.";
-        handleClose();
+        //LOG_INFO<<"Write event ready.";
+        auto rc = out_.sendRemain(event_.getFd());
+        //写操作出错，有可能是对端终止了连接
+        if (rc == -1)
+        {
+            handleClose();
+            return;
+        }
+
+        if (writeCallback_)
+            writeCallback_(out_);
+        if (state_ == DISCONNECTING && out_.isEmpty())
+        {
+            //LOG_INFO << "Disconnecting,close connection.";
+            handleClose();
+        }
     }
 }
 void Connection::handleError()
 {
-    if (errorCallback_)
-        errorCallback_();
+    if (state_ == CONNECTED)
+    {
+        if (errorCallback_)
+            errorCallback_();
+    }
 }
 //以下三个为发送响应的函数  并不是写事件回调
 int Connection::send(const char *msg, int len)
@@ -80,18 +92,20 @@ int Connection::send(const HttpResponse &response)
     return response.sendResponse(shared_from_this());
     //LOG_INFO<<"Response send completed.";
 }
-void Connection::enableAll()
+void Connection::eventInit()
 {
     loop_->assertInOwnerThread();
+    event_.tie(shared_from_this());
     event_.enableAll();
 }
 void Connection::handleClose()
 {
-    loop_->assertInOwnerThread();
+    //loop_->assertInOwnerThread();
     //ref:2  map_+here
     //LOG_INFO << "Current reference count:" << shared_from_this().use_count();
     //防止已经close了连接
     //FIXME:防止定时器回调重复close
+    //FIXED:加入了state的判断
     if (state_ != DISCONNECTED)
     {
         state_ = DISCONNECTED;

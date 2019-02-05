@@ -4,6 +4,7 @@
  *事件的抽象，包括对应的文件描述符(用于epoll的监控)、相应的事件回调、用户读写缓冲区； 
 */
 #include <functional>
+#include <memory>
 #include "mutex.h"
 namespace event
 {
@@ -101,6 +102,8 @@ class Event : Nocopyable
     }
     //从epoll监控中删除
     void remove();
+    //延长owner对象的生命期，防止在回调调用的过程中owner对象被析构
+    void tie(const std::shared_ptr<void> &owner);
 
   private:
     static const int ReadEvent;
@@ -124,10 +127,16 @@ class Event : Nocopyable
     Callback errorCallback_;
     //这个是为了方便EPOLLHUP事件就绪时方便关闭连接
     Callback closeCallback_;
+    //在每次handleEvent之前先持有Connection对象的引用，以防止在回调调用过程中析构了Connection对象
+    //另外，监听事件不需要tie，因为它没有onwer对象,所以这里额外需要一个参数
+    bool tied_;
+    std::weak_ptr<void> owner_;
     //TODO:buffer
     /************************以下为内部调用*******************************************/
     //在所属的eventloop对应的io线程中的epoll对象中增加、修改、删除对自身的监控
     void update();
+    //真正的handle内部调用
+    void _handleEvent();
 };
 } // namespace event
 #endif // !_connection_h

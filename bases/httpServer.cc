@@ -9,7 +9,7 @@
 #include "logger.h"
 namespace net
 {
-HttpServer::HttpServer(event::EventLoop *loop, const std::vector<int> &ports) : Server(loop, ports), requestTimeout_(15), aliveTimeout_(30)
+HttpServer::HttpServer(event::EventLoop *loop, const std::vector<int> &ports) : Server(loop, ports), requestTimeout_(10), aliveTimeout_(20)
 {
     setReadCallback(std::bind(&net::HttpServer::onMessage, this, std::placeholders::_1, std::placeholders::_2));
 }
@@ -65,7 +65,6 @@ void HttpServer::onMessage(const ConnectionPtr &conn, bases::UserBuffer &buf)
         }
         conn->setState(DISCONNECTING);
         req.reset();
-        //conn->handleClose();
     }
     else if (status == DONE)
     {
@@ -81,12 +80,13 @@ void HttpServer::onMessage(const ConnectionPtr &conn, bases::UserBuffer &buf)
             conn->handleClose();
             return;
         }
-        conn->setState(DISCONNECTING);
         if (req->getHeader("Connection") != "Keep-Alive" &&
             req->getHeader("Connection") != "keep-alive")
         {
+            //NOTE:由于webbench、ab压测时都需要服务端主动关闭连接(默认短连接)，所以这里在解析完请求之后主动设置当前
+            //连接状态为准备断开状态，以便写事件回调在写完响应到套接字内核缓冲区后能够及时关闭连接；
+            conn->setState(DISCONNECTING);
             req.reset();
-            //conn->handleClose();
         }
         else //长连接
         {
@@ -94,7 +94,7 @@ void HttpServer::onMessage(const ConnectionPtr &conn, bases::UserBuffer &buf)
             conn->resetBuffer();
             req->resetRequest();
             req->setAliveTimer(aliveTimeout_);
-            //LOG_INFO << "Set timer,timeout at:" << req->getAliveTimer().format();
+            LOG_INFO << "Set timer,timeout at:" << req->getAliveTimer().format();
             currentLoop->addTimer(req->getAliveTimer());
         }
     }

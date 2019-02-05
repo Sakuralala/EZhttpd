@@ -204,3 +204,9 @@ of the channel.  Subsequent reads from the channel will return 0 (end of file) o
 所以这里的结论就是，使用epoll的et模式监控监听描述符时，所有的操作都要非阻塞+循环;  
 9、显示的两端地址和netstat的完全不一样？？？  
 已修复：调用inet_ntop或者getsockname时传入的长度值写成0了。。。      
+
+2019.02.05  
+1、对端半途终止连接的处理还存在问题:即如果在发送响应的过程中发现对面关掉了连接，那么我们的操作是关闭这个连接并从回调中返回，但是注意，当前的函数调用栈应该是这样的:  
+EventLoop::loop->Event::handleEvent->Event::readCallback_->Connection::handleRead->
+Connection::readCallback->Server::readCallback_->HttpServer::onMessage->(后面的关闭操作就省略了);  
+关闭连接并返回之后，当前Connection的引用计数变为了0，那么它就要进行析构操作，即其Event成员也会被销毁，但是Event::handleEvent函数后面还有处理写事件的操作:writeCallback_,这后面也还有一系列相似的函数调用及成员访问(最主要是对用户态缓冲区的访问，然而这部分内存已经被释放了！！！)，所以这里就知道了muduo中Channel::tie函数的作用了，就是为了应对这种"在回调调用的过程中销毁掉Connection对象的情况"。之前没考虑这种情况，也是偶尔服务端会报段错误的原因(应该是访问了这个已经被释放的内存)。     

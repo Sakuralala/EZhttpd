@@ -44,7 +44,7 @@ void Server::distributeConnetion(int acceptFd, const struct sockaddr_in &clientA
      * **/
     loop_->assertInOwnerThread();
     total_ += 1;
-    LOG_WARN << "Total connection:" << total_;
+    LOG_INFO << "Total connection:" << total_;
     auto loop = pool_.getNextLoop();
     /*
     EventPtr ev(new event::Event(acceptFd, loop));
@@ -71,7 +71,7 @@ void Server::distributeConnetion(int acceptFd, const struct sockaddr_in &clientA
     conn->setCloseCallback(std::bind(&net::Server::delConnection, this, std::placeholders::_1));
     connected_.emplace(acceptFd, conn);
     //修改感兴趣的事件需要在owner线程中进行，因为没有加锁
-    loop->runInLoop(std::bind(&net::Connection::enableAll, conn.get()));
+    loop->runInLoop(std::bind(&net::Connection::eventInit, conn.get()));
     auto peer = conn->getPeerAddress();
     auto local = conn->getLocalAddress();
     //LOG_WARN << "New connection distributed from: "
