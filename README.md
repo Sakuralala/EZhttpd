@@ -9,4 +9,5 @@ Features:
   6.Smart pointer is used to avoid memory leak.   
   7.Effective asynchronous log, which uses "multi-producer, single consumer" model,and double buffer strategy is adopted.  
   
+  感谢陈硕老师及其的书:《Linux多线程服务端编程--使用muduo C++网络库》.
   
