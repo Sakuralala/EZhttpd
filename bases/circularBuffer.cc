@@ -3,13 +3,13 @@
 #include <errno.h>
 #include <unistd.h>
 #include "circularBuffer.h"
-#include "logger.h"
+#include "../log/logger.h"
 
 namespace bases
 {
 void CircularBuffer::resize()
 {
-    LOG_INFO << "Resized.";
+    LOG_INFO << "Resized to " << buffer_.capacity() * 2 << ".";
     std::vector<char> buffer;
     buffer.reserve(buffer_.capacity() * 2);
     memcpy(&*buffer.begin(), begin(), buffer_.capacity() - readIndex_);
@@ -118,19 +118,19 @@ int CircularBuffer::recv(int fd)
         if (writeIndex_ >= readIndex_)
         {
             //NOTE:新版的STL中vector的迭代器不再是普通指针，而是normal_iterator类
-            //LOG_INFO << "Try to read " << buffer_.capacity() - writeIndex_ << " bytes.";
+            LOG_DEBUG << "Try to read " << buffer_.capacity() - writeIndex_ << " bytes.";
             n = ::read(fd, &*buffer_.begin() + writeIndex_, buffer_.capacity() - writeIndex_);
         }
         else
         {
-            //LOG_INFO << "Try to read " << readIndex_ - writeIndex_ << " bytes.";
+            LOG_DEBUG << "Try to read " << readIndex_ - writeIndex_ << " bytes.";
             n = ::read(fd, &*buffer_.begin() + writeIndex_, readIndex_ - writeIndex_);
         }
         if (n == -1)
         {
             if (errno == EAGAIN || errno == EWOULDBLOCK)
             {
-                LOG_INFO << "Read event is not ready in socket:" << fd;
+                LOG_DEBUG << "Read event is not ready in socket:" << fd;
             }
             else
             {
@@ -142,15 +142,15 @@ int CircularBuffer::recv(int fd)
         else if (n == 0) //对端关闭了写端或者直接关闭了连接，对于前者，说明请求发完了，那么正常处理即可
                          //对于后者，此时再写会出错,所以设置一个定时器，超时直接关闭连接
         {
-            LOG_INFO << "Peer closed connection, socket:" << fd;
+            LOG_DEBUG << "Peer closed connection, socket:" << fd;
             break;
         }
         //n>0
         writeIndex_ = (writeIndex_ + n) % buffer_.capacity();
         total += n;
-        LOG_INFO << "Read " << n << " bytes from socket:" << fd;
-                 //<< ",message:\n"
-                 //<< getAll();
+        LOG_DEBUG << "Read " << n << " bytes from socket:" << fd;
+        //<< ",message:\n"
+        //<< getAll();
     }
     return total;
 }
@@ -174,11 +174,11 @@ int CircularBuffer::send(int fd, const char *msg, int len)
             {
                 if (errno == EWOULDBLOCK || errno == EAGAIN)
                 {
-                    LOG_INFO << "Write is not ready in socket:" << fd;
+                    LOG_DEBUG << "Write is not ready in socket:" << fd;
                 }
                 else
                 {
-                    //LOG_ERROR << "Write error:" << strerror(errno) << " in socket:" << fd;
+                    LOG_ERROR << "Write error:" << strerror(errno) << " in socket:" << fd;
                     return -1;
                 }
                 break;
@@ -188,7 +188,7 @@ int CircularBuffer::send(int fd, const char *msg, int len)
                 LOG_ERROR << "Write returned 0 in socket:" << fd;
                 return -1;
             }
-            LOG_INFO << "Write " << n << " bytes to socket:" << fd; //<< ",message:\n"
+            LOG_DEBUG << "Write " << n << " bytes to socket:" << fd; //<< ",message:\n"
                                                                     //<< msg;
             total += n;
             msg += n;
@@ -229,11 +229,11 @@ int CircularBuffer::sendRemain(int fd)
         {
             if (errno == EWOULDBLOCK || errno == EAGAIN)
             {
-                LOG_INFO << "Write is not ready in socket:" << fd;
+                LOG_DEBUG << "Write is not ready in socket:" << fd;
             }
             else
             {
-                //LOG_ERROR << "Write error:" << strerror(errno) << " in socket:" << fd;
+                LOG_ERROR << "Write error:" << strerror(errno) << " in socket:" << fd;
                 return -1;
             }
             break;
@@ -244,7 +244,7 @@ int CircularBuffer::sendRemain(int fd)
             return -1;
         }
         //n>0
-        LOG_INFO << "Write " << n << " bytes to socket:" << fd;
+        LOG_DEBUG << "Write " << n << " bytes to socket:" << fd;
         readIndex_ = (readIndex_ + n) % buffer_.capacity();
         total += n;
         //发完清零

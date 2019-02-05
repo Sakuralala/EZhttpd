@@ -8,8 +8,11 @@ CCOBJFLAG := $(CCFLAG) -c
 # path marcros
 BIN_PATH := bin
 OBJ_PATH := obj
-SRC_PATH := bases
-DBG_PATH := debug
+SRC_PATH1 := bases
+SRC_PATH2 := event
+SRC_PATH3 := log
+SRC_PATH4 := net
+DEBUG_PATH := debug
 
 # compile marcros
 TARGET_NAME := main
@@ -17,13 +20,17 @@ ifeq ($(OS),Windows_NT)
 	TARGET_NAME := $(addsuffix .exe,$(TARGET_NAME))
 endif
 TARGET := $(BIN_PATH)/$(TARGET_NAME)
-TARGET_DEBUG := $(DBG_PATH)/$(TARGET_NAME)
-MAIN_SRC := bases/main.cpp
+TARGET_DEBUG := $(DEBUG_PATH)/$(TARGET_NAME)
+#MAIN_SRC := main.cpp
 
 # src files & obj files
-SRC := $(foreach x, $(SRC_PATH), $(wildcard $(addprefix $(x)/*,.c*)))
+SRC1 := $(foreach x, $(SRC_PATH1), $(wildcard $(addprefix $(x)/*,.c*)))
+SRC2 := $(foreach x, $(SRC_PATH2), $(wildcard $(addprefix $(x)/*,.c*)))
+SRC3 := $(foreach x, $(SRC_PATH3), $(wildcard $(addprefix $(x)/*,.c*)))
+SRC4 := $(foreach x, $(SRC_PATH4), $(wildcard $(addprefix $(x)/*,.c*)))
+SRC := $(SRC1) $(SRC2) $(SRC3) $(SRC4) main.cpp
 OBJ := $(addprefix $(OBJ_PATH)/, $(addsuffix .o, $(notdir $(basename $(SRC)))))
-OBJ_DEBUG := $(addprefix $(DBG_PATH)/, $(addsuffix .o, $(notdir $(basename $(SRC)))))
+OBJ_DEBUG := $(addprefix $(DEBUG_PATH)/, $(addsuffix .o, $(notdir $(basename $(SRC)))))
 
 # clean files list
 DISTCLEAN_LIST := $(OBJ) \
@@ -37,17 +44,33 @@ default: all
 
 # non-phony targets
 $(TARGET): $(OBJ)
-	$(CC) $(CCFLAG) -o $@ $?
+	$(CC) $(CCFLAG) -o $@ $^
+ 
+$(OBJ_PATH)/main.o: main.cpp 
+	$(CC) $(CCOBJFLAG) -o $@ $^
+$(OBJ_PATH)/%.o: $(SRC_PATH1)/%.c* 
+	$(CC) $(CCOBJFLAG) -o $@ $^
+$(OBJ_PATH)/%.o: $(SRC_PATH2)/%.c* 
+	$(CC) $(CCOBJFLAG) -o $@ $^
+$(OBJ_PATH)/%.o: $(SRC_PATH3)/%.c* 
+	$(CC) $(CCOBJFLAG) -o $@ $^
+$(OBJ_PATH)/%.o: $(SRC_PATH4)/%.c* 
+	$(CC) $(CCOBJFLAG) -o $@ $^
 
-$(OBJ_PATH)/%.o: $(SRC_PATH)/%.c*
-	$(CC) $(CCOBJFLAG) -o $@ $<
 
-$(DBG_PATH)/%.o: $(SRC_PATH)/%.c*
-	$(CC) $(CCOBJFLAG) $(DBGFLAG) -o $@ $<
+$(DEBUG_PATH)/main.o: main.cpp
+	$(CC) $(CCOBJFLAG) $(DBGFLAG) -o $@ $^
+$(DEBUG_PATH)/%.o: $(SRC_PATH1)/%.c*
+	$(CC) $(CCOBJFLAG) $(DBGFLAG) -o $@ $^
+$(DEBUG_PATH)/%.o: $(SRC_PATH2)/%.c*
+	$(CC) $(CCOBJFLAG) $(DBGFLAG) -o $@ $^
+$(DEBUG_PATH)/%.o: $(SRC_PATH3)/%.c*
+	$(CC) $(CCOBJFLAG) $(DBGFLAG) -o $@ $^
+$(DEBUG_PATH)/%.o: $(SRC_PATH4)/%.c*
+	$(CC) $(CCOBJFLAG) $(DBGFLAG) -o $@ $^
 
 $(TARGET_DEBUG): $(OBJ_DEBUG)
-	$(CC) $(CCFLAG) $(DBGFLAG) $^ -o $@
-
+	$(CC) $(CCFLAG) $(DBGFLAG)  -o $@ $^
 # phony rules
 .PHONY: all
 all: $(TARGET)

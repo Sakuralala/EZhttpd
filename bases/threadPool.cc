@@ -1,6 +1,6 @@
 #include "thread.h"
 #include "threadPool.h"
-#include "logger.h"
+#include "../log/logger.h"
 
 namespace bases
 {
@@ -15,7 +15,7 @@ void ThreadPool::run(int threadNum)
 {
     if (threadNum > 0 && !running_)
     {
-        LOG_INFO << "Thread pool started.";
+        LOG_DEBUG << "Thread pool started.";
         //std::cout << "Thread pool started." << std::endl;
         running_ = true;
         threads_.reserve(threadNum);
@@ -43,7 +43,7 @@ void ThreadPool::stop(ExitMode em)
             //std::cout << "thread " << thread->getTid() << " destroyed." << std::endl;
         }
         //std::cout << "Thread pool destroyed, current task queue size:" << taskQueue_.size() << std::endl;
-        LOG_INFO << "Thread pool destroyed, current task queue size:" << taskQueue_.size();
+        LOG_DEBUG << "Thread pool destroyed, current task queue size:" << taskQueue_.size();
     }
 }
 ThreadPool::Task ThreadPool::get()
@@ -63,7 +63,7 @@ ThreadPool::Task ThreadPool::get()
         if (!running_)
         {
             //std::cout << "Sub thread:" << currentThreadID() << ",do some final works,current task queue size:" << taskQueue_.size() << std::endl;
-            LOG_INFO << "Sub thread:" << currentThreadID() << ", do some final works, current task size:" << taskQueue_.size();
+            LOG_DEBUG << "Sub thread:" << currentThreadID() << ", do some final works, current task size:" << taskQueue_.size();
         }
         task = std::move(taskQueue_.front());
         taskQueue_.pop_front();
@@ -101,7 +101,7 @@ void ThreadPool::threadFunction()
     }
     catch (...)
     {
-        LOG_FATAL<<"threadpool error occured.";
+        LOG_FATAL << "threadpool error occured.";
         throw;
     }
 }
