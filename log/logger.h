@@ -54,6 +54,10 @@ class Logger
 #define LOG_WARN                                            \
     if (bases::Logger::getLevel() <= bases::LogLevel::WARN) \
     bases::Logger(__FILE__, __LINE__, bases::LogLevel::WARN).stream()
-#define LOG_ERROR bases::Logger(__FILE__, __LINE__, bases::LogLevel::ERROR).stream()
-#define LOG_FATAL bases::Logger(__FILE__, __LINE__, bases::LogLevel::FATAL).stream()
+#define LOG_ERROR                                            \
+    if (bases::Logger::getLevel() <= bases::LogLevel::ERROR) \
+    bases::Logger(__FILE__, __LINE__, bases::LogLevel::ERROR).stream()
+#define LOG_FATAL                                            \
+    if (bases::Logger::getLevel() <= bases::LogLevel::FATAL) \
+    bases::Logger(__FILE__, __LINE__, bases::LogLevel::FATAL).stream()
 #endif //  __logger_h!
