@@ -92,12 +92,25 @@ void ThreadPool::threadFunction()
         //也只是会多进一次get及多进行一次while的判断而已
         //另一种方法是不要get函数  直接把内容写到while中，while的条件改为true 跳出在
         //循环中进行
-        while (running_ || (eMode_ == Graceful && !taskQueue_.empty()))
+        //DONE:使用了goto语句
+        while (running_)
         {
             Task task(get());
             if (task)
                 task();
         }
+    //NOTE:使用goto??
+    Graceful:
+    {
+        MutexGuard mg(mutex_);
+        if ((eMode_ == Graceful && !taskQueue_.empty()))
+        {
+            Task task(get());
+            if (task)
+                task();
+            goto Graceful;
+        }
+    }
     }
     catch (...)
     {

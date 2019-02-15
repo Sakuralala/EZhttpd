@@ -84,8 +84,7 @@ void Server::delConnection(int fd)
 }
 void Server::_delConnection(int fd)
 {
-    //QUESTION:由server进行描述符的关闭？
-    //ANSWER:暂时先这样
+    //NOTE:由Server进行套接字描述符的关闭
     if (::close(fd))
         LOG_ERROR << "Close fd:" << fd << " error:" << strerror(errno);
     else

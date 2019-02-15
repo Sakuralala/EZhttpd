@@ -5,7 +5,7 @@
 #include "../log/logger.h"
 namespace event
 {
-IOThread::IOThread() : Thread(std::bind(&IOThread::IOThreadFunc, this), "IO Thread"), loop_(nullptr),latch__(1)
+IOThread::IOThread() : Thread(std::bind(&IOThread::IOThreadFunc, this), "IO Thread"), loop_(nullptr), latch__(1)
 {
 }
 
@@ -29,11 +29,11 @@ void IOThread::run()
     latch__.wait();
 }
 //在存在eventLoop的情况下才能join
-void IOThread::join() 
+void IOThread::join()
 {
     if (loop_)
     {
-        //需要先退出循环  不然无法join 
+        //需要先退出循环  不然无法join
         loop_->quit();
         Thread::join();
     }
@@ -49,7 +49,7 @@ void IOThread::IOThreadFunc()
     latch__.countdown();
     //try
     //{
-        loop_->loop();
+    loop_->loop();
     //}
     /*
     catch (...)

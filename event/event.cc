@@ -37,7 +37,6 @@ Event::Event(Event &&ev)
 }
 Event::~Event()
 {
-    //::close(fd_);
 }
 //通用的调用次序:Event::enable/disable*->Event::update->EventLoop::updateEvent->Epoller::updateEvent
 void Event::update()

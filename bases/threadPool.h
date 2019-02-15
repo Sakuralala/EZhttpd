@@ -39,7 +39,7 @@ private:
   Condition notEmpty_;
   Condition notFull_;
   std::deque<Task> taskQueue_;
-  //这里需要使用unique_ptr来把thread包起来 理由:thread是nocopyable的且nomoveable的,而vector保存的东西至少要是moveable的(归根结底还是由于vector的动态扩容操作,导致需要将原空间的内容copy/move到新的空间里)，所以需要包一下；另外，使用unique_ptr的话，就不需要手动调用Thread类的dtor了
+  //这里需要使用unique_ptr来把thread包起来 理由:thread是nocopyable的且nomoveable的,而vector保存的东西至少要是moveable的(归根结底还是由于vector的动态扩容操作,导致需要将原空间的内容copy/move到新的空间里)，所以需要包一下；另外使用unique_ptr可以降低编译依赖，减少暴露内部类;
   std::vector<std::unique_ptr<Thread>> threads_;
 };
 } // namespace bases

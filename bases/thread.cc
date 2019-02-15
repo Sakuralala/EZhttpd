@@ -99,7 +99,6 @@ void Thread::detach()
 
 Thread::~Thread()
 {
-    //detach();
     join();
 }
 } // namespace bases

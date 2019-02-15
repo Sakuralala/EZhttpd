@@ -57,7 +57,7 @@ bool Epoller::updateEvent(Event *ev)
 int Epoller::poll(int ms, EventList &el)
 {
     int n = epoll_wait(epollFd_, &*events_.begin(), events_.size(), ms);
-    LOG_DEBUG << " Wake up.";
+    //LOG_DEBUG << " Wake up.";
     for (int i = 0; i < n; ++i)
     {
         el.push_back(static_cast<Event *>(events_[i].data.ptr));
