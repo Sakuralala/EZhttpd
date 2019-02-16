@@ -27,11 +27,16 @@ extern const char *VersionString[2];
 enum ParseStatus
 {
     WAIT,//在长连接的情况下，方便判断当前是否为新来的请求的起始部分，以便删除定时器
-    REQUEST_LINE,
+    REQUEST_METHOD,
+    REQUEST_URL,
+    PROTOCOL_VERSION,
     HEADERS,
     CONTENT,
     DONE,
-    REQUEST_LINE_ERROR,
+    REQUEST_METHOD_ERROR,
+    REQUEST_URL_ERROR,
+    PROTOCOL_ERROR,
+    PROTOCOL_VERSION_ERROR,
     HEADERS_ERROR,
     CONTENT_ERROR
 };

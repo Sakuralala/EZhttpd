@@ -72,7 +72,9 @@ class HttpRequest
     std::unordered_map<std::string, std::string> headers_;
     //正文
     std::string content_;
-    ParseStatus parseRequestLine(bases::UserBuffer &buf);
+    ParseStatus parseMethod(bases::UserBuffer &buf);
+    ParseStatus parseURL(bases::UserBuffer &buf);
+    ParseStatus parseProtocol(bases::UserBuffer &buf);
     ParseStatus parseHeader(bases::UserBuffer &buf);
     ParseStatus parseContent(bases::UserBuffer &buf);
     //方便请求找到其上层connection对象

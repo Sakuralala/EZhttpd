@@ -5,7 +5,7 @@
 #include "../log/logger.h"
 namespace net
 {
-HttpRequest::HttpRequest(const ConnectionPtr &conn, uint64_t secs, const event::Timer::TimeoutCallback &cb) : status_(REQUEST_LINE),
+HttpRequest::HttpRequest(const ConnectionPtr &conn, uint64_t secs, const event::Timer::TimeoutCallback &cb) : status_(REQUEST_METHOD),
                                                                                                               owner_(conn),
                                                                                                               requestTimer_(secs, cb),
                                                                                                               aliveTimer_(0, cb)
@@ -16,9 +16,13 @@ ParseStatus HttpRequest::parse(bases::UserBuffer &buf)
 {
     //仅仅为了长连接而使用
     if (status_ == WAIT)
-        status_ = REQUEST_LINE;
-    if (status_ == REQUEST_LINE)
-        return parseRequestLine(buf);
+        status_ = REQUEST_METHOD;
+    if (status_ == REQUEST_METHOD)
+        return parseMethod(buf);
+    else if(status_==REQUEST_URL)
+        return parseURL(buf);
+    else if(status_==PROTOCOL_VERSION)
+        return parseProtocol(buf);
     else if (status_ == HEADERS)
         return parseHeader(buf);
     else if (status_ == CONTENT)
@@ -26,13 +30,12 @@ ParseStatus HttpRequest::parse(bases::UserBuffer &buf)
 
     return status_;
 }
-//解析请求行
-ParseStatus HttpRequest::parseRequestLine(bases::UserBuffer &buf)
+ParseStatus HttpRequest::parseMethod(bases::UserBuffer &buf)
 {
-    LOG_DEBUG << "Parsing request line.....";
+    LOG_DEBUG << "Parsing request method.....";
     auto pos = buf.find(' ');
     if (!pos)
-        return REQUEST_LINE;
+        return REQUEST_METHOD;
     int len = buf.length(buf.begin(), pos);
     /*****************解析请求方法***************************/
     if (len == 3)
@@ -44,8 +47,8 @@ ParseStatus HttpRequest::parseRequestLine(bases::UserBuffer &buf)
         else
         {
             LOG_ERROR << "Unknown method." << buf.getMsg(buf.begin(), pos);
-            status_ = REQUEST_LINE_ERROR;
-            return REQUEST_LINE_ERROR;
+            status_ = REQUEST_METHOD_ERROR;
+            return REQUEST_METHOD_ERROR;
         }
     }
     else if (len == 4)
@@ -57,8 +60,8 @@ ParseStatus HttpRequest::parseRequestLine(bases::UserBuffer &buf)
         else
         {
             LOG_ERROR << "Unknown method." << buf.getMsg(buf.begin(), pos);
-            status_ = REQUEST_LINE_ERROR;
-            return REQUEST_LINE_ERROR;
+            status_ = REQUEST_METHOD_ERROR;
+            return REQUEST_METHOD_ERROR;
         }
     }
     else if (len == 6)
@@ -68,60 +71,70 @@ ParseStatus HttpRequest::parseRequestLine(bases::UserBuffer &buf)
         else
         {
             LOG_ERROR << "Unknown method:" << buf.getMsg(buf.begin(), pos);
-            status_ = REQUEST_LINE_ERROR;
-            return REQUEST_LINE_ERROR;
+            status_ = REQUEST_METHOD_ERROR;
+            return REQUEST_METHOD_ERROR;
         }
     }
     else
     {
         LOG_ERROR << "Unknown method." << buf.getMsg(buf.begin(), pos);
-        status_ = REQUEST_LINE_ERROR;
-        return REQUEST_LINE_ERROR;
+        status_ = REQUEST_METHOD_ERROR;
+        return REQUEST_METHOD_ERROR;
     }
     buf.retrieve(len + 1);
+    status_ = REQUEST_URL;
+    return parseURL(buf);
+}
+ParseStatus HttpRequest::parseURL(bases::UserBuffer &buf)
+{
+    LOG_DEBUG << "Parsing request url.....";
     /****************************解析url********************************/
-    pos = buf.find(' ');
+    auto pos = buf.find(' ');
     if (!pos)
-        return REQUEST_LINE;
+        return REQUEST_URL;
     //move sematic
     //FIXME:keep-alive情况下，并发量一上来会导致解析出错，url变为GET
     //经排查发现是connection的buffer没有重置；后续发现buffer内部处理有问题，
     //简单来说，我把vector.size()和vector.capacity()搞混了
     url_ = buf.getMsg(buf.begin(), pos);
-    if (url_ == "GET")
-    {
-        LOG_ERROR << "method:" << method_ << ", total message:" << buf.getAll();
-    }
-    len = buf.length(buf.begin(), pos);
+    auto len = buf.length(buf.begin(), pos);
     //move sematic
-    path_ = url_.substr(url_.find('/'));
+    auto slashPos = url_.find('/');
+    if(slashPos==std::string::npos)
+    {
+        LOG_ERROR << "Unknown requested path."<<url_;
+        status_ = REQUEST_URL_ERROR;
+        return status_;
+    }
+    path_ = url_.substr(slashPos);
     buf.retrieve(len + 1);
-
+    status_ = PROTOCOL_VERSION;
+    return parseProtocol(buf);
+}
+ParseStatus HttpRequest::parseProtocol(bases::UserBuffer &buf)
+{
+    LOG_DEBUG << "Parsing protocol.....";
     /******************************解析协议版本*****************************/
-    pos = buf.find('/');
+    auto pos = buf.findCRLF();
     if (!pos)
-        return REQUEST_LINE;
-    if (!buf.compare("HTTP", 4))
+        return PROTOCOL_VERSION;
+    if (!buf.compare("HTTP/", 5))
     {
         LOG_ERROR << "Unknown protocol:" << buf.getMsg(buf.begin(), pos);
-        status_ = REQUEST_LINE_ERROR;
-        return REQUEST_LINE_ERROR;
+        status_ = PROTOCOL_ERROR;
+        return status_;
     }
     //"http/"
     buf.retrieve(5);
-    pos = buf.findCRLF();
-    if (!pos)
-        return REQUEST_LINE;
-    //len = buf.length(buf.begin(), pos);
     if (buf.compare("1.1", 3))
         version_ = Ver_11;
     else if (buf.compare("1.0", 3))
         version_ = Ver_10;
     else
     {
-        LOG_ERROR << "Unknown http version.";
-        status_ = REQUEST_LINE_ERROR;
-        return REQUEST_LINE_ERROR;
+        LOG_ERROR << "Unsupported http version.";
+        status_ = PROTOCOL_VERSION_ERROR;
+        return status_;
     }
     //example:1.1\r\n
     buf.retrieve(5);
