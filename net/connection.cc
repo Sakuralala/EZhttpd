@@ -107,6 +107,7 @@ void Connection::handleClose()
         state_ = DISCONNECTED;
         event_.disableAll();
         //QUESTION:如果epoll把当前就绪的事件放入到rdlist后刚好进行remove操作，那么会如何？
+        //ANSWER:单线程情况下(此处的情况)不存在这个问题，多线程情况下似乎文档没有进行说明。
         event_.remove();
         //FIXED:删除定时器防止后续重复close
         if (context_)

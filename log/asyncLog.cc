@@ -60,6 +60,7 @@ void AsyncLog::writeToFile()
 {
     looping_ = true;
     BufferVector fullCopy;
+    //避免后续的扩容操作
     fullCopy.reserve(MaxNumber);
     LogFile lf(pathName_);
     latch_.countdown();

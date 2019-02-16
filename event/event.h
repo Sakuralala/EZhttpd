@@ -131,7 +131,6 @@ class Event : Nocopyable
     //另外，监听事件不需要tie，因为它没有onwer对象,所以这里额外需要一个参数
     bool tied_;
     std::weak_ptr<void> owner_;
-    //TODO:buffer
     /************************以下为内部调用*******************************************/
     //在所属的eventloop对应的io线程中的epoll对象中增加、修改、删除对自身的监控
     void update();
