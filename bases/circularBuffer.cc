@@ -134,7 +134,14 @@ int CircularBuffer::recv(int fd)
             }
             else
             {
-                LOG_ERROR << "Read event error:" << strerror(errno);
+                if (errno == EPIPE)
+                {
+                    LOG_INFO << "Peer closed connection,socket:" << fd;
+                }
+                else
+                {
+                    LOG_ERROR << "Read event error:" << strerror(errno);
+                }
                 return -1;
             }
             break;
@@ -189,7 +196,7 @@ int CircularBuffer::send(int fd, const char *msg, int len)
                 return -1;
             }
             LOG_DEBUG << "Write " << n << " bytes to socket:" << fd; //<< ",message:\n"
-                                                                    //<< msg;
+                                                                     //<< msg;
             total += n;
             msg += n;
             len -= n;

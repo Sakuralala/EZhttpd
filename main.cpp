@@ -21,5 +21,10 @@ int main()
     EventLoop baseLoop;
     HttpServer server(&baseLoop, ports);
     server.run(4);
+    //测试下内存泄漏
+    /*
+    event::Timer stopTimer(35,std::bind(&net::HttpServer::stop,&server));
+    baseLoop.addTimer(stopTimer);
+    */
     baseLoop.loop();
 }

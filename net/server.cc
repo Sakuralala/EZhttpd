@@ -86,9 +86,13 @@ void Server::_delConnection(int fd)
 {
     //NOTE:由Server进行套接字描述符的关闭
     if (::close(fd))
+    {
         LOG_ERROR << "Close fd:" << fd << " error:" << strerror(errno);
+    }
     else
+    {
         LOG_DEBUG << "Close fd:" << fd;
+    }
     LOG_DEBUG << "Current reference count:" << connected_[fd].use_count();
     connected_.erase(fd);
 }
@@ -121,5 +125,6 @@ void Server::stop()
     }
     for (auto &elem : connected_)
         ::close(elem.first);
+    loop_->quit();
 }
 } // namespace net

@@ -26,7 +26,7 @@ void IOThreadPool::stop()
     {
         thread->join();
     }
-    LOG_DEBUG << "IO thread pool stopped.";
+    LOG_INFO << "IO thread pool stopped.";
 }
 void IOThreadPool::put(Task task)
 {

@@ -11,7 +11,7 @@ namespace event
 //当前线程的eventloop 初始为null
 __thread EventLoop *currentThreadLoop = nullptr;
 const int WaitMs = 1000;
-EventLoop::EventLoop() : looping_(false), threadID_(bases::currentThreadID()), wakeupFd_(::eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK)), wakeupEvent_(new Event(wakeupFd_, this)), poller_(new Epoller()), mutex_()
+EventLoop::EventLoop() : looping_(false), threadID_(bases::currentThreadID()), wakeupFd_(::eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK)), wakeupEvent_(new Event(wakeupFd_, this)), poller_(new Epoller()),  mutex_()
 {
     if (currentThreadLoop)
     {
