@@ -83,7 +83,7 @@ void Event::handleEvent()
             _handleEvent();
         }
     }
-    else//监听、wakeup事件是不需要tie的，因为它们不对应一个Connection对象
+    else //监听、wakeup事件是不需要tie的，因为它们不对应一个Connection对象
     {
         _handleEvent();
     }
@@ -92,16 +92,32 @@ void Event::_handleEvent()
 {
     //FIXME:EPOLLHUP事件的处理 从man epoll_ctl可知，这个事件仅仅表示对端关闭了连接
     //FIXED:我们还需要先把对端在关闭连接之前发送的数据读完才行 这个时候才能关闭连接
+    //后续:EPOLLHUP一般表示本端出错？比如说对端非正常断开，服务端写会触发RST分节
+    //然后就会导致EPOLLHUP被设置
+    //这个好像也不用处理，道理和EPOLLERR一样
+    /*
     if ((readyType_ & EPOLLHUP) && !(readyType_ & EPOLLIN))
     {
         if (closeCallback_)
             closeCallback_();
     }
+    */
+    /*
     if (readyType_ & EPOLLERR)
     {
         if (errorCallback_)
             errorCallback_();
     }
+    */
+    //由于某些原因出现了这个的话，让读写回调去处理即可
+    if (readyType_ & (EPOLLERR | EPOLLHUP))
+    {
+        readyType_ = EPOLLIN | EPOLLOUT;
+    }
+    //错误事件的话,由于在读写事件的回调中是一直读或写的，那么只要在这期间出错了就会关闭连接
+    //故其实不需要检测错误事件,如果是在读写之后的某个时间点发生了错误，那么服务端是检测不出来的
+    //因为EPOLLERR只有在服务端采取了动作之后才能检测地出，这就是需要设置服务端超时回调的原因
+    //因为服务端不可能没事就读一个套接字；
     if (readyType_ & (ReadEvent | EPOLLRDHUP))
     {
         if (readCallback_)
@@ -109,6 +125,7 @@ void Event::_handleEvent()
     }
     if (readyType_ & WriteEvent)
     {
+        //LOG_INFO << " Write event ready in socket:" << fd_;
         if (writeCallback_)
             writeCallback_();
     }

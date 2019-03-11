@@ -12,10 +12,20 @@ void CircularBuffer::resize()
     LOG_INFO << "Resized to " << buffer_.capacity() * 2 << ".";
     std::vector<char> buffer;
     buffer.reserve(buffer_.capacity() * 2);
-    memcpy(&*buffer.begin(), begin(), buffer_.capacity() - readIndex_);
-    memcpy(&*buffer.begin() + buffer_.capacity() - readIndex_, &*buffer_.begin(), readIndex_);
+    if (readIndex_ < writeIndex_)
+    {
+        memcpy(&*buffer.begin(), begin(), writeIndex_ - readIndex_);
+    }
+    else
+    {
+        //把后一部分移到前面
+        memcpy(&*buffer.begin(), begin(), buffer_.capacity() - readIndex_);
+        //把前一部分移到后面
+        memcpy(&*buffer.begin() + buffer_.capacity() - readIndex_, &*buffer_.begin(), readIndex_);
+    }
+
+    writeIndex_ = size();
     readIndex_ = 0;
-    writeIndex_ = buffer_.capacity();
     buffer_.swap(buffer);
 }
 //FIXME:大小检查
@@ -146,8 +156,8 @@ int CircularBuffer::recv(int fd)
             }
             break;
         }
-        else if (n == 0) //对端关闭了写端或者直接关闭了连接，对于前者，说明请求发完了，那么正常处理即可
-                         //对于后者，此时再写会出错,所以设置一个定时器，超时直接关闭连接
+        else if (n == 0) //对端关闭了写端或者直接关闭了连接，对于前者，说明请求发完了，那么正常处
+        //理即可 对于后者，此时再写会出错,所以设置一个定时器，超时直接关闭连接
         {
             LOG_DEBUG << "Peer closed connection, socket:" << fd;
             break;
@@ -185,7 +195,14 @@ int CircularBuffer::send(int fd, const char *msg, int len)
                 }
                 else
                 {
-                    LOG_ERROR << "Write error:" << strerror(errno) << " in socket:" << fd;
+                    if (errno == EPIPE)
+                    {
+                        LOG_INFO << "Write failed because peer closed connection,socket:" << fd;
+                    }
+                    else
+                    {
+                        LOG_ERROR << "Write error:" << strerror(errno) << " in socket:" << fd;
+                    }
                     return -1;
                 }
                 break;
@@ -207,6 +224,9 @@ int CircularBuffer::send(int fd, const char *msg, int len)
         if (remain() < len)
             resize();
         int tmp = buffer_.capacity() - writeIndex_;
+        //writeIndex<readIndex的情况是肯定没resize过的(因为resize会手动调整前后两段)
+        //那么说明writeIndex后面的剩余部分肯定比要写的长
+        //||后面的就是writeIndex>=readIndex的情况，如果剩余部分够，写一次就行了
         if (writeIndex_ < readIndex_ || len <= tmp)
         {
             memcpy(&*buffer_.begin() + writeIndex_, msg, len);
@@ -217,6 +237,7 @@ int CircularBuffer::send(int fd, const char *msg, int len)
             memcpy(&*buffer_.begin(), msg + tmp, len - tmp);
         }
         writeIndex_ = (writeIndex_ + len) % buffer_.capacity();
+        LOG_INFO << "Saved the remaining part.";
     }
     return total;
 }
@@ -240,7 +261,14 @@ int CircularBuffer::sendRemain(int fd)
             }
             else
             {
-                LOG_ERROR << "Write error:" << strerror(errno) << " in socket:" << fd;
+                if (errno == EPIPE)
+                {
+                    LOG_INFO << "Write failed because peer closed connection,socket:" << fd;
+                }
+                else
+                {
+                    LOG_ERROR << "Write error:" << strerror(errno) << " in socket:" << fd;
+                }
                 return -1;
             }
             break;

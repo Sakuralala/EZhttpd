@@ -7,9 +7,9 @@
 #include <fstream>
 #include <sstream>
 #include <stdlib.h>
-#include "asyncLog.h"
-#include "thread.h"
-#include "logger.h"
+#include "log/asyncLog.h"
+#include "bases/thread.h"
+#include "log/logger.h"
 using namespace bases;
 using std::cout;
 using std::endl;
@@ -32,7 +32,7 @@ vector<string> getString(ifstream &inFile)
 vector<string> *globalVS = nullptr;
 void logWrite()
 {
-    int num = 1000;
+    int num = 500;
     while (num--)
     {
         for (auto &str : *globalVS)
@@ -44,7 +44,9 @@ int main()
     LOG_INFO << "This is a log test, don't worry.";
     //LOG_FATAL << "fatal test.";
     //同下  使用绝对路径
-    ifstream inFile("/home/oldhen/cpptest/miscs/open");
+    ifstream inFile("/home/oldhen/cpptest/miscs/miscs/open");
+    if(!inFile)
+        cout << "open file error." << endl;
     vector<string> vs = getString(inFile);
     globalVS = &vs;
     Thread t1(&logWrite, "t1");

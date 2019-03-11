@@ -5,10 +5,8 @@
 #include "../log/logger.h"
 namespace net
 {
-HttpRequest::HttpRequest(const ConnectionPtr &conn, uint64_t secs, const event::Timer::TimeoutCallback &cb) : status_(REQUEST_METHOD),
-                                                                                                              owner_(conn),
-                                                                                                              requestTimer_(secs, cb),
-                                                                                                              aliveTimer_(0, cb)
+HttpRequest::HttpRequest(const ConnectionPtr &conn) : status_(REQUEST_METHOD),
+                                                      owner_(conn)
 {
 }
 HttpRequest::~HttpRequest() = default;
@@ -19,9 +17,9 @@ ParseStatus HttpRequest::parse(bases::UserBuffer &buf)
         status_ = REQUEST_METHOD;
     if (status_ == REQUEST_METHOD)
         return parseMethod(buf);
-    else if(status_==REQUEST_URL)
+    else if (status_ == REQUEST_URL)
         return parseURL(buf);
-    else if(status_==PROTOCOL_VERSION)
+    else if (status_ == PROTOCOL_VERSION)
         return parseProtocol(buf);
     else if (status_ == HEADERS)
         return parseHeader(buf);
@@ -100,9 +98,9 @@ ParseStatus HttpRequest::parseURL(bases::UserBuffer &buf)
     auto len = buf.length(buf.begin(), pos);
     //move sematic
     auto slashPos = url_.find('/');
-    if(slashPos==std::string::npos)
+    if (slashPos == std::string::npos)
     {
-        LOG_ERROR << "Unknown requested path."<<url_;
+        LOG_ERROR << "Unknown requested path." << url_;
         status_ = REQUEST_URL_ERROR;
         return status_;
     }

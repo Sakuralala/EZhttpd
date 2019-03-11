@@ -1,5 +1,7 @@
 #include <netinet/in.h>
+#include <netinet/tcp.h>//tcpnodelay
 #include <arpa/inet.h>
+#include <sys/socket.h>
 #include "acceptor.h"
 #include "../bases/utils.h"
 #include "../event/eventLoop.h"
@@ -25,6 +27,7 @@ bool Acceptor::listen(int port)
     if (listenFd_ == -1)
         return false;
     bases::setNonBlocking(listenFd_);
+
     //NOTE:don't use map_[port]=event::Event(listenFd_,loop_)
     //since event::Event has no default ctor, however,
     //unordered_map::operator[] needs the mapped type has default ctor.
@@ -52,6 +55,8 @@ void Acceptor::accept(int listenFd)
             }
             return;
         }
+        int val = 1;
+        ::setsockopt(acceptedFd, IPPROTO_TCP, TCP_NODELAY, &val, sizeof(val));
         char buf[INET_ADDRSTRLEN];
         /*
         if (!inet_ntop(AF_INET, &clientAddr.sin_addr, buf, INET_ADDRSTRLEN))

@@ -22,6 +22,7 @@ void Server::discardMsg(const ConnectionPtr &ptr, bases::UserBuffer &buf)
     ptr->send("HTTP/1.1 404 Not Found\r\n\r\n", 30);
 }
 //新连接建立成功后需要将其按照某种策略分配到一个sub reactor中
+//还有一种做法就是主reactor只传递新建立的套接字描述符给sub reactor，后续的创建Connection由sub reactor来做，这样的话，主reactor就不知道当前有多少个具体连接了 而且需要另外设置Connection的回调
 void Server::distributeConnetion(int acceptFd, const struct sockaddr_in &clientAddr)
 {
     /**

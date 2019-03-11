@@ -21,6 +21,7 @@ class Timer
 {
 public:
   typedef std::function<void()> TimeoutCallback;
+  Timer(){}
   explicit Timer(uint64_t secs);
   explicit Timer(uint64_t secs, TimeoutCallback cb);
   ~Timer() = default;

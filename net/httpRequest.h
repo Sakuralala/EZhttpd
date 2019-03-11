@@ -16,7 +16,7 @@ typedef std::shared_ptr<Connection> ConnectionPtr;
 class HttpRequest
 {
   public:
-    HttpRequest(const ConnectionPtr &conn, uint64_t secs, const event::Timer::TimeoutCallback &cb);
+    HttpRequest(const ConnectionPtr &conn);
     ~HttpRequest();
     ParseStatus parse(bases::UserBuffer &buf);
     std::string status2String() const
@@ -29,6 +29,10 @@ class HttpRequest
         if (headers_.count(str))
             return headers_[str];
         return "";
+    }
+    HttpMethod getMethod() const
+    {
+        return method_;
     }
     ParseStatus getStatus() const
     {
@@ -46,21 +50,24 @@ class HttpRequest
     {
         return requestTimer_;
     }
-    void setRequestTimer(uint64_t secs)
+    void setRequestTimer(uint64_t secs,event::Timer::TimeoutCallback cb)
     {
         requestTimer_.setTime(secs);
+        requestTimer_.setCallback(std::move(cb));
     }
     const event::Timer &getAliveTimer() const
     {
         return aliveTimer_;
     }
-    void setAliveTimer(uint64_t secs)
+    void setAliveTimer(uint64_t secs,event::Timer::TimeoutCallback cb)
     {
         aliveTimer_.setTime(secs);
+        aliveTimer_.setCallback(std::move(cb));
     }
 
     //重置http请求，方便后续复用
     void resetRequest();
+
   private:
     std::string path_;
     std::string url_;

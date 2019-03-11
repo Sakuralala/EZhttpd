@@ -8,6 +8,7 @@ std::string LogPath = "/home/oldhen/logfile/";
 AsyncLog::AsyncLog(const std::string &pathname) : pathName_(pathname), thread_(std::bind(&AsyncLog::writeToFile, this), "Log thread"), latch_(1), mutex_(), cond_(mutex_), looping_(false), current_(new LogBuffer), empty_(MaxNumber - 1)
 {
     full_.reserve(MaxNumber);
+    empty_.reserve(MaxNumber);
     for (int i = 0; i < empty_.size(); ++i)
         //empty_.emplace_back(new LogBuffer);
         empty_[i] = std::unique_ptr<LogBuffer>(new LogBuffer);
@@ -34,15 +35,21 @@ bool AsyncLog::append(const char *message, size_t length)
     //当前缓冲区用完了
     if (current_->append(message, length) == false)
     {
-        //总共就16块 用完了就没了
+        //缓存区块数固定 用完了就没了
         //muduo中的处理方式是直接扔了后面的部分
         //这里的处理方式是到达阈值了直接不让写了
+        //为什么直接扔了不写呢，是这样考虑的，即某个时段出现了疯狂写日志导致写满的情况，大概率是
+        //重复的信息，那么只需要保存前面的即可，后面的不需要
         if (!empty_.empty())
         {
             //放这里是为了保证current不为空
             full_.push_back(std::move(current_));
             current_ = std::move(empty_.back());
             empty_.pop_back();
+            /*
+            if(empty_.empty())
+                LOG_INFO << "oldhen";
+            */
         }
         else
             return false;
@@ -70,7 +77,7 @@ void AsyncLog::writeToFile()
             MutexGuard mg(mutex_);
             if (full_.empty())
             {
-                cond_.timedWait(DefaultWriteSeconds);
+                //cond_.timedWait(DefaultWriteSeconds);
             }
             //只有在还有剩余buffer的时候才把current也拿过来写入文件
             if (!empty_.empty())

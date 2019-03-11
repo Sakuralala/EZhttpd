@@ -12,6 +12,7 @@ LogFile::LogFile(const std::string &name, uint32_t interval) : baseName_(name), 
 LogFile::~LogFile() = default;
 void LogFile::append(const char *buf, size_t len)
 {
+    //因为目前只有一个日志线程，所以用不用mutex其实一样
     MutexGuard mg(mutex_);
     file_->append(buf, len);
     if (++cnt_ > flushInterval_)
@@ -23,6 +24,7 @@ void LogFile::append(const char *buf, size_t len)
     if (file_->getCurrentSize() > RollSize)
     {
         LOG_INFO << "Log file size limited,roll.";
+        //不需要flush 因为后面AppendFile的析构会fclose，这会导致用户态缓冲区的刷新(到内核高速缓存)
         rollFile();
     }
 }

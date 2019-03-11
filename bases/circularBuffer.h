@@ -14,7 +14,7 @@ namespace bases
 class CircularBuffer
 {
 private:
-  static const int InitialSize = 8192;
+  static const int InitialSize = 4096;
 
 public:
   CircularBuffer() : readIndex_(-1), writeIndex_(-1)
@@ -68,7 +68,7 @@ public:
   int length(const char *beg, const char *end)
   {
     if (isEmpty())
-      return -1;
+      return 0;
     return (end - beg + buffer_.capacity()) % buffer_.capacity();
   }
   bool compare(const char *s, int len) const;

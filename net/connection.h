@@ -2,6 +2,9 @@
 #define __connection_h
 /**
  * 连接的抽象，主要就是Event+读写缓冲区+两端地址; 
+ * 改为Connection继承自Event似乎更好，可以减少数据成员的冗余，以及回调调用的冗余,但是这样的话如
+ * 何传递Server的回调到Connection中?一种解决方法就是不传回调了，直接写死下面需要调用的函数，直接
+ * 调用HttpServer::onMessage;    
  * **/
 #include <functional>
 #include <memory>

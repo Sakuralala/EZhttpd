@@ -29,9 +29,7 @@ void HttpServer::onMessage(const ConnectionPtr &conn, bases::UserBuffer &buf)
     //首先创建一个http request请求的上下文
     if (!req)
     {
-        conn->setContext(std::shared_ptr<HttpRequest>(
-            new HttpRequest(conn, requestTimeout_,
-                            std::bind(&net::Connection::handleClose, conn.get()))));
+        conn->setContext(std::shared_ptr<HttpRequest>(new HttpRequest(conn)));
         req = conn->getContext();
     }
     else //删除定时器
@@ -46,7 +44,7 @@ void HttpServer::onMessage(const ConnectionPtr &conn, bases::UserBuffer &buf)
     }
 
     //设置定时器
-    req->setRequestTimer(requestTimeout_);
+    req->setRequestTimer(requestTimeout_, std::bind(&Connection::handleClose, conn.get()));
     LOG_DEBUG << "Set timer,timeout at:" << req->getRequestTimer().format();
     currentLoop->addTimer(req->getRequestTimer());
     auto status = req->parse(buf);
@@ -81,19 +79,25 @@ void HttpServer::onMessage(const ConnectionPtr &conn, bases::UserBuffer &buf)
             return;
         }
         if (req->getHeader("Connection") != "Keep-Alive" &&
-            req->getHeader("Connection") != "keep-alive")
+            req->getHeader("Connection") != "keep-alive" && req->getHeader("connection") != "Keep-Alive" && req->getHeader("connection") != "keep-alive")
         {
+            req.reset();
             //NOTE:由于webbench、ab压测时都需要服务端主动关闭连接(默认短连接)，所以这里在解析完请求之后主动设置当前
             //连接状态为准备断开状态，以便写事件回调在写完响应到套接字内核缓冲区后能够及时关闭连接；
             conn->setState(DISCONNECTING);
-            req.reset();
+            //写完直接关
+            if(buf.isEmpty())
+            {
+                //LOG_INFO << "Write completed in 1 time.";
+                conn->handleClose();
+            }
         }
         else //长连接
         {
             LOG_DEBUG << "Keep alive to:" << peer.first << ":" << peer.second;
             conn->resetBuffer();
             req->resetRequest();
-            req->setAliveTimer(aliveTimeout_);
+            req->setAliveTimer(aliveTimeout_, std::bind(&Connection::handleClose, conn.get()));
             LOG_DEBUG << "Set timer,timeout at:" << req->getAliveTimer().format();
             currentLoop->addTimer(req->getAliveTimer());
         }

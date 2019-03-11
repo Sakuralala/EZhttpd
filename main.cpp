@@ -1,8 +1,11 @@
 #include <signal.h>
 #include <vector>
+#include <iostream>
 #include "net/httpServer.h"
 #include "event/eventLoop.h"
-
+#include "bases/thread.h"
+using std::cout;
+using std::endl;
 class IgnSigPipe
 {
   public:
@@ -11,8 +14,9 @@ class IgnSigPipe
         ::signal(SIGPIPE, SIG_IGN);
     }
 };
-IgnSigPipe ign;
 //忽略sigpipe信号
+IgnSigPipe ign;
+
 int main()
 {
     using event::EventLoop;
@@ -26,5 +30,5 @@ int main()
     event::Timer stopTimer(35,std::bind(&net::HttpServer::stop,&server));
     baseLoop.addTimer(stopTimer);
     */
-    baseLoop.loop();
+     baseLoop.loop();
 }

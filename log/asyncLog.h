@@ -56,7 +56,7 @@ private:
   //写满了的buffer块
   BufferVector full_;
   //满的buffer块和备用buffer块之和的最大值
-  static const int MaxNumber = 16;
+  static const int MaxNumber = 8;
   static const int DefaultWriteSeconds = 5;
 };
 } // namespace bases

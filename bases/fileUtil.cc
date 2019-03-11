@@ -9,7 +9,7 @@ AppendFile::AppendFile(const std::string &pathname):file_(fopen(pathname.c_str()
     //file_ = fopen(pathname.c_str(),"ae");
     if(!file_)
         fprintf(stderr, "Create file stream failed:%s.,the file name is:%s.\n", strerror(errno),pathname.c_str());
-
+    //设置流的缓冲区
     setbuffer(file_, buffer_, sizeof buffer_);
 }
 AppendFile::~AppendFile()

@@ -4,7 +4,7 @@
  * http响应； 
  * **/
 #include <unordered_map>
-#include <unordered_set>
+//#include <unordered_set>
 #include <string>
 #include <memory>
 #include "httpUtils.h"
@@ -21,11 +21,12 @@ public:
   int sendResponse(const ConnectionPtr &conn) const;
 
 private:
+  static std::unordered_map<std::string, std::string> mime_;
   int responseCode_;
   //响应行
   std::string responseLine_;
   //响应头
-  std::unordered_set<std::string> headers_;
+  std::unordered_map<std::string,std::string> headers_;
   //响应正文
   std::string content_;
   //响应码
