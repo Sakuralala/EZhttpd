@@ -12,6 +12,9 @@ void CircularBuffer::resize()
     LOG_INFO << "Resized to " << buffer_.capacity() * 2 << ".";
     std::vector<char> buffer;
     buffer.reserve(buffer_.capacity() * 2);
+    //虽然不太可能出现 还是要检测下当前buffer_是否为空
+    if(isEmpty())
+        readIndex_ = writeIndex_ = 0;
     if (readIndex_ < writeIndex_)
     {
         memcpy(&*buffer.begin(), begin(), writeIndex_ - readIndex_);
@@ -27,6 +30,18 @@ void CircularBuffer::resize()
     writeIndex_ = size();
     readIndex_ = 0;
     buffer_.swap(buffer);
+}
+std::string CircularBuffer::getMsg(const char *beg, int len) const
+{
+    if(isEmpty()||len>size()||beg>end()||beg<begin()||beg+len>end())
+        return "";
+    int len1 = &*buffer_.begin() + buffer_.capacity() - beg;
+    if (beg < end() || len <=len1)
+        return std::string(beg,len);
+    else
+    {
+        return std::string(beg, len1) + std::string(&*buffer_.begin(),len-len1);
+    }
 }
 //FIXME:大小检查
 std::string CircularBuffer::getMsg(const char *beg, const char *end) const
@@ -159,6 +174,9 @@ int CircularBuffer::recv(int fd)
         else if (n == 0) //对端关闭了写端或者直接关闭了连接，对于前者，说明请求发完了，那么正常处
         //理即可 对于后者，此时再写会出错,所以设置一个定时器，超时直接关闭连接
         {
+            //存在这种情况，对端关闭连接导致读事件就绪，而当前读缓冲区为空导致前面将读写索引置0了,这里需要改回来
+            if(!total&&!readIndex_&&!writeIndex_)
+                readIndex_ = writeIndex_ = -1;
             LOG_DEBUG << "Peer closed connection, socket:" << fd;
             break;
         }
@@ -221,6 +239,9 @@ int CircularBuffer::send(int fd, const char *msg, int len)
     }
     if (len) //把没发完的保存起来
     {
+        //防止此时缓冲区为空
+        if(isEmpty())
+            readIndex_ = writeIndex_ = 0;
         if (remain() < len)
             resize();
         int tmp = buffer_.capacity() - writeIndex_;
@@ -237,7 +258,7 @@ int CircularBuffer::send(int fd, const char *msg, int len)
             memcpy(&*buffer_.begin(), msg + tmp, len - tmp);
         }
         writeIndex_ = (writeIndex_ + len) % buffer_.capacity();
-        LOG_INFO << "Saved the remaining part.";
+        //LOG_INFO << "Saved the remaining part.";
     }
     return total;
 }
@@ -282,7 +303,8 @@ int CircularBuffer::sendRemain(int fd)
         LOG_DEBUG << "Write " << n << " bytes to socket:" << fd;
         readIndex_ = (readIndex_ + n) % buffer_.capacity();
         total += n;
-        //发完清零
+        //发完清零 写缓冲区唯一一种会导致缓冲区为空的情况 即写缓冲区内部剩余的数据全写到内核缓冲
+        //区中了
         if (readIndex_ == writeIndex_)
             readIndex_ = writeIndex_ = -1;
     }

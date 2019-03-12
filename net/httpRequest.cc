@@ -183,9 +183,19 @@ ParseStatus HttpRequest::parseHeader(bases::UserBuffer &buf)
 }
 ParseStatus HttpRequest::parseContent(bases::UserBuffer &buf)
 {
-    //TODO:解析请求正文
+    if(headers_.find("Content-Length")!=headers_.end()||headers_.find("content-length")!=headers_.end())
+    {
+        int len = std::stoi(headers_["Content-Length"]);
+        //解析请求正文
+        if(buf.size()<len)
+            return status_;
+        else
+        {
+            content_ = std::move(buf.getMsg(buf.begin(),len));
+        }
+    }
     status_ = DONE;
-    return DONE;
+    return status_;
 }
 void HttpRequest::resetRequest()
 {

@@ -56,7 +56,7 @@ void Acceptor::accept(int listenFd)
             return;
         }
         int val = 1;
-        ::setsockopt(acceptedFd, IPPROTO_TCP, TCP_NODELAY, &val, sizeof(val));
+        //::setsockopt(acceptedFd, IPPROTO_TCP, TCP_NODELAY, &val, sizeof(val));
         char buf[INET_ADDRSTRLEN];
         /*
         if (!inet_ntop(AF_INET, &clientAddr.sin_addr, buf, INET_ADDRSTRLEN))

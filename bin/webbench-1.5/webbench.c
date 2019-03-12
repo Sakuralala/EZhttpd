@@ -385,7 +385,7 @@ static int bench(void)
 		  if(--clients==0) break;
 	  }
 	  fclose(f);
-
+   //speed是指成功完成的请求数，bytes是指传输的字节数
   printf("\nSpeed=%d pages/min, %d bytes/sec.\nRequests: %d susceed, %d failed.\n",
 		  (int)((speed+failed)/(benchtime/60.0f)),
 		  (int)(bytes/(float)benchtime),

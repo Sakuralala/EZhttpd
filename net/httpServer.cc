@@ -61,8 +61,12 @@ void HttpServer::onMessage(const ConnectionPtr &conn, bases::UserBuffer &buf)
             conn->handleClose();
             return;
         }
-        conn->setState(DISCONNECTING);
         req.reset();
+        conn->setState(DISCONNECTING);
+        if(buf.isEmpty())
+        {
+            conn->handleClose();
+        }
     }
     else if (status == DONE)
     {
@@ -88,7 +92,6 @@ void HttpServer::onMessage(const ConnectionPtr &conn, bases::UserBuffer &buf)
             //写完直接关
             if(buf.isEmpty())
             {
-                //LOG_INFO << "Write completed in 1 time.";
                 conn->handleClose();
             }
         }

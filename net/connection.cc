@@ -105,7 +105,7 @@ void Connection::handleClose()
     if (state_ != DISCONNECTED)
     {
         state_ = DISCONNECTED;
-        event_.disableAll();
+        //event_.disableAll();
         //QUESTION:考虑这么一种情况，当前请求超时准备删除，但此时从这个请求的另一端来了消息，那么epoll_wait下一次还会存在这个就绪事件吗?  
         //ANSWER:看了下源码，会从rdlist中删除之；
         event_.remove();

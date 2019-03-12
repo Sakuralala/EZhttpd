@@ -73,6 +73,7 @@ public:
   }
   bool compare(const char *s, int len) const;
   std::string getMsg(const char *beg, const char *end) const;
+  std::string getMsg(const char *beg, int len) const;
   std::string getAll() const;
   //readIndex_前进len字节
   bool retrieve(int len)
@@ -82,6 +83,7 @@ public:
     if (len > remain())
       return false;
     readIndex_ = (readIndex_ + len) % buffer_.capacity();
+    //读缓冲区唯一一种会导致缓冲区变为空的情况 即读缓冲区中的数据已经被解析完了
     if (readIndex_ >= writeIndex_)
       readIndex_ = writeIndex_ = -1;
     return true;
