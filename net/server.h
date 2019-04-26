@@ -19,8 +19,6 @@ class Event;
 namespace net
 {
 class Connection;
-class HttpRequest;
-class HttpResponse;
 class Server
 {
 public:
@@ -35,7 +33,7 @@ public:
   void run(int numThreads);
   void stop();
   //新连接建立的回调
-  void distributeConnetion(int acceptFd,const struct sockaddr_in &clientAddr);
+  void distributeConnetion(int acceptFd, const struct sockaddr_in &clientAddr);
   void setReadCallback(ReadCallback cb)
   {
     readCallback_ = std::move(cb);
@@ -56,6 +54,7 @@ public:
   void delConnection(int fd);
   //具体实现
   void _delConnection(int fd);
+
 private:
   bool running_;
   long long total_;
