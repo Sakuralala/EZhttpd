@@ -66,6 +66,8 @@
         "unordered_map": "cpp",
         "unordered_set": "cpp",
         "*.md": "markdown",
-        "forward_list": "cpp"
-    }
+        "forward_list": "cpp",
+        "any": "cpp"
+    },
+    "C_Cpp.intelliSenseEngineFallback": "Enabled"
 }

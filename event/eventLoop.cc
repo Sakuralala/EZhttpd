@@ -1,3 +1,4 @@
+#include <iostream> //for !isOwnerThread
 #include <utility>
 #include <sys/eventfd.h>
 #include <unistd.h>
@@ -11,7 +12,7 @@ namespace event
 //当前线程的eventloop 初始为null
 __thread EventLoop *currentThreadLoop = nullptr;
 const int WaitMs = 1000;
-EventLoop::EventLoop() : looping_(false), threadID_(bases::currentThreadID()), wakeupFd_(::eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK)), wakeupEvent_(new Event(wakeupFd_, this)), poller_(new Epoller()),  mutex_()
+EventLoop::EventLoop() : looping_(false), threadID_(bases::currentThreadID()), wakeupFd_(::eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK)), wakeupEvent_(new Event(wakeupFd_, this)), poller_(new Epoller()), mutex_()
 {
     if (currentThreadLoop)
     {
@@ -37,7 +38,10 @@ bool EventLoop::isOwnerThread() const
 void EventLoop::assertInOwnerThread()
 {
     if (!isOwnerThread())
+    {
+        std::cout << "Current thread:" << bases::currentThreadID() << " does not own the event loop,the owner of the eventloop is thread:" << threadID_ << ".";
         LOG_FATAL << "Current thread:" << bases::currentThreadID() << " does not own the event loop,the owner of the eventloop is thread:" << threadID_ << ".";
+    }
 }
 
 //当前线程被唤醒事件的回调
@@ -68,24 +72,22 @@ void EventLoop::updateEvent(Event *ev)
     assertInOwnerThread();
     poller_->updateEvent(ev);
 }
-/*
-void EventLoop::addTimer(uint64_t secs, typename TimerSet::Callback cb)
+TimerKey EventLoop::addTimer(uint64_t secs, typename TimerSet::Callback cb,uint64_t interval)
 {
     //无锁，所以需要保证由owner线程调用此函数
     //其他线程通过queueInLoop或runInLoop进行间接调用
     assertInOwnerThread();
-    timerSet_.add(secs, std::move(cb));
+    return timerSet_.add(secs, std::move(cb),interval);
 }
-*/
+/*
 void EventLoop::addTimer(const Timer &t)
 {
-    assertInOwnerThread();
-    timerSet_.add(t);
 }
-void EventLoop::delTimer(const Timer &t)
+*/
+void EventLoop::delTimer(const TimerKey &tk)
 {
     assertInOwnerThread();
-    timerSet_.del(t);
+    timerSet_.del(tk);
 }
 //退出循环
 void EventLoop::quit()

@@ -23,6 +23,7 @@ class LogFile
 
   private:
     std::string baseName_;
+    std::string curFileName_;
     //刷新写间隔
     uint32_t flushInterval_;
     uint32_t cnt_;

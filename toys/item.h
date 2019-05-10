@@ -23,23 +23,35 @@ public:
         PREPEND,
         CAS
     };
-    Item (){}
-    Item(const string &key, uint32_t valLen,uint32_t flags, uint32_t casVal=1);
+    Item() {}
+    Item(const string &key, size_t valLen, size_t flags);
     ~Item()
     {
-        ::delete data_;
+        ::delete [] data_;
     }
-    uint32_t currentLength() const
+    size_t curDataLen() const
     {
         return curDataLen_;
     }
-    uint32_t totalLength() const
+    size_t curValLen() const
+    {
+        return curDataLen_ - keyLen_;
+    }
+    size_t totalLen() const
     {
         return keyLen_ + valLen_;
     }
-    uint32_t remainLength() const
+    size_t remainLength() const
     {
-        return totalLength() - curDataLen_;
+        return totalLen() - curDataLen_;
+    }
+    size_t keyLen() const
+    {
+        return keyLen_;
+    }
+    size_t valLen() const
+    {
+        return valLen_;
     }
     string key() const
     {
@@ -47,28 +59,39 @@ public:
     }
     string data() const
     {
-        return string(data_ + keyLen_, curDataLen_-keyLen_);
+        return string(data_ + keyLen_, curDataLen_ - keyLen_);
     }
-    uint32_t flag() const
+    size_t flag() const
     {
         return flags_;
     }
-    uint32_t cas() const
+    size_t cas() const
     {
         return casVal_;
     }
-    uint32_t hash() const
+    size_t hash() const
     {
         return hashVal_;
     }
-    bool appendData(const string &newData);
+    void resetVal()
+    {
+        curDataLen_ = keyLen_;
+    }
+    bool endwithCRLF() const
+    {
+        return curDataLen_ >= 2 && (*(data_ + curDataLen_ - 1) == '\n') && (*(data_ + curDataLen_ - 2) == '\r');
+    }
+    bool appendData(const string &newData, size_t len);
+    bool appendData(string &&newData, size_t len);
+    bool prependData(const string &newData, size_t len);
+    bool prependData(string &&newData, size_t len);
 
 private:
-    uint32_t keyLen_;
-    uint32_t valLen_;
-    uint32_t curDataLen_;
-    uint32_t casVal_;
-    uint32_t flags_;
+    size_t keyLen_;
+    size_t valLen_;
+    size_t curDataLen_;
+    size_t flags_;
+    size_t casVal_;
     size_t hashVal_;
     char *data_;
 };
@@ -76,21 +99,21 @@ typedef shared_ptr<Item> ItemPtr;
 typedef shared_ptr<const Item> ConstItemPtr;
 struct ItemHash
 {
-    size_t operator()(const ItemPtr &ptr)
+    size_t operator()(const ItemPtr &ptr) const
     {
         return ptr->hash();
     }
 };
 struct ItemCmp
 {
-    bool operator()(const ItemPtr &ptr1,const ItemPtr &ptr2)
+    bool operator()(const ItemPtr &ptr1, const ItemPtr &ptr2) const
     {
         return ptr1->key() == ptr2->key();
     }
 };
 typedef std::unordered_set<ItemPtr, ItemHash, ItemCmp> ItemSet;
 //带锁的一个itemset
-struct  ItemswithLock
+struct ItemswithLock
 {
     ItemSet items_;
     bases::Mutex mutex_;

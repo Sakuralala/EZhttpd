@@ -12,17 +12,22 @@ namespace event
 //周几
 static const char *DayofWeek[7] = {"Monday", "Tuesday", "Wednsday", "Thursday", "Friday", "Saturday", "Sunday"};
 //timernode
-Timer::Timer(uint64_t secs)
+Timer::Timer(uint64_t secs, uint64_t repeats) : repeatTimes_(repeats), seconds_(secs)
 {
-    setTime(secs);
+    setTimer(secs);
 }
-void Timer::setTime(uint64_t secs)
+void Timer::setTimer(uint64_t secs)
 {
     struct timeval tv;
     gettimeofday(&tv, nullptr);
     milliSeconds_ = (secs + tv.tv_sec) * 1000 + tv.tv_usec / 1000;
 }
-Timer::Timer(uint64_t secs, TimeoutCallback cb) : Timer(secs)
+void Timer::resetTimer()
+{
+    LOG_DEBUG << "Reset timer to " << seconds_ << " second(s) later.";
+    setTimer(seconds_);
+}
+Timer::Timer(uint64_t secs, TimeoutCallback cb, uint64_t repeats) : Timer(secs, repeats)
 {
     //for this reason:
     //"an initializer for a delegating constructor must appear alone",I put it here.
@@ -43,7 +48,7 @@ std::string Timer::format() const
 {
     return format(milliSeconds_);
 }
-std::string Timer::format(uint64_t millisecs) 
+std::string Timer::format(uint64_t millisecs)
 {
     char buf[64];
     memset(buf, 0, sizeof(char) * 64);
@@ -65,38 +70,45 @@ void TimerSet::getExpired()
     auto last = timerSet_.upper_bound(tk);
     if (last == timerSet_.begin())
         return;
+    //需要更新的定时器
+    std::vector<TimerPtr> needUpdate;
     for (auto ite = timerSet_.begin(); ite != last; ++ite)
     {
-        LOG_DEBUG << "Timer:" << ite->second.format() << " timeout.";
-        ite->second.timeout();
+        ite->second->timeout();
+        if (ite->second->getRepeatTimes() != 1)
+        {
+            ite->second->decreaseRepeatTimes();
+            ite->second->resetTimer();
+            needUpdate.emplace_back(std::move(ite->second));
+        }
     }
-
-    timerSet_.erase(timerSet_.begin(), last);
+    timerSet_.erase(timerSet_.begin(),last);
+    for(auto &elem:needUpdate)
+    {
+        timerSet_.emplace(TimerKey(elem.get()),std::move(elem));
+    }
 }
 
-/*
-void TimerSet::add(uint64_t secs, Callback cb)
+TimerKey TimerSet::add(uint64_t secs, Callback cb, uint64_t interval)
 {
-    timerSet_.insert(Timer(secs, std::move(cb)));
+    std::unique_ptr<Timer> tp(new Timer(secs, cb, interval));
+    TimerKey tk(tp.get());
+    timerSet_.emplace(tk, std::move(tp));
+    return tk;
 }
-*/
+/*
 void TimerSet::add(const Timer &t)
 {
-    if (!t.getCallback())
-    {
-        LOG_ERROR << "No timeout callback set!";
-        return;
-    }
-    timerSet_.emplace(TimerKey(&t), t);
 }
-
-void TimerSet::del(const Timer &t)
+*/
+void TimerSet::del(const TimerKey &tk)
 {
-    timerSet_.erase(TimerKey(&t));
+    if (!timerSet_.erase(tk))
+        LOG_DEBUG << "No such timer.";
 }
 //查看最近超时的定时器的超时时间
 uint64_t TimerSet::getNext() const
 {
-    return timerSet_.begin()->second - Timer::now();
+    return *(timerSet_.begin()->second.get()) - Timer::now();
 }
 } // namespace event

@@ -1,7 +1,7 @@
 #TODO:头文件修改时不会更新
 # tool marcros
 CC := clang++
-CCFLAG := -fno-limit-debug-info -fno-elide-constructors -std=c++11 -pthread
+CCFLAG := -fno-limit-debug-info -fno-elide-constructors -std=c++17 -pthread
 DBGFLAG := -g
 CCOBJFLAG := $(CCFLAG) -c
 
@@ -12,6 +12,7 @@ SRC_PATH1 := bases
 SRC_PATH2 := event
 SRC_PATH3 := log
 SRC_PATH4 := net
+SRC_PATH5 := toys
 DEBUG_PATH := debug
 
 # compile marcros
@@ -28,7 +29,8 @@ SRC1 := $(foreach x, $(SRC_PATH1), $(wildcard $(addprefix $(x)/*,.c*)))
 SRC2 := $(foreach x, $(SRC_PATH2), $(wildcard $(addprefix $(x)/*,.c*)))
 SRC3 := $(foreach x, $(SRC_PATH3), $(wildcard $(addprefix $(x)/*,.c*)))
 SRC4 := $(foreach x, $(SRC_PATH4), $(wildcard $(addprefix $(x)/*,.c*)))
-SRC := $(SRC1) $(SRC2) $(SRC3) $(SRC4) main.cpp
+SRC5 := $(foreach x, $(SRC_PATH5), $(wildcard $(addprefix $(x)/*,.c*)))
+SRC := $(SRC1) $(SRC2) $(SRC3) $(SRC4)  $(SRC5) main.cpp
 OBJ := $(addprefix $(OBJ_PATH)/, $(addsuffix .o, $(notdir $(basename $(SRC)))))
 OBJ_DEBUG := $(addprefix $(DEBUG_PATH)/, $(addsuffix .o, $(notdir $(basename $(SRC)))))
 
@@ -56,6 +58,8 @@ $(OBJ_PATH)/%.o: $(SRC_PATH3)/%.c*
 	$(CC) $(CCOBJFLAG) -o $@ $^
 $(OBJ_PATH)/%.o: $(SRC_PATH4)/%.c* 
 	$(CC) $(CCOBJFLAG) -o $@ $^
+$(OBJ_PATH)/%.o: $(SRC_PATH5)/%.c* 
+	$(CC) $(CCOBJFLAG) -o $@ $^
 
 
 $(DEBUG_PATH)/main.o: main.cpp
@@ -67,6 +71,8 @@ $(DEBUG_PATH)/%.o: $(SRC_PATH2)/%.c*
 $(DEBUG_PATH)/%.o: $(SRC_PATH3)/%.c*
 	$(CC) $(CCOBJFLAG) $(DBGFLAG) -o $@ $^
 $(DEBUG_PATH)/%.o: $(SRC_PATH4)/%.c*
+	$(CC) $(CCOBJFLAG) $(DBGFLAG) -o $@ $^
+$(DEBUG_PATH)/%.o: $(SRC_PATH5)/%.c*
 	$(CC) $(CCOBJFLAG) $(DBGFLAG) -o $@ $^
 
 $(TARGET_DEBUG): $(OBJ_DEBUG)

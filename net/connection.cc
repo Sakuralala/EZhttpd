@@ -106,17 +106,24 @@ void Connection::handleClose()
     {
         state_ = DISCONNECTED;
         //event_.disableAll();
-        //QUESTION:考虑这么一种情况，当前请求超时准备删除，但此时从这个请求的另一端来了消息，那么epoll_wait下一次还会存在这个就绪事件吗?  
+        //QUESTION:考虑这么一种情况，当前请求超时准备删除，但此时从这个请求的另一端来了消息，那么epoll_wait下一次还会存在这个就绪事件吗?
         //ANSWER:看了下源码，会从rdlist中删除之；
-        event_.remove();
-        //FIXED:删除定时器防止后续重复close
-        if (context_)
+        /*
+        if (context_.has_value())
         {
-            loop_->delTimer(context_->getRequestTimer());
-            loop_->delTimer(context_->getAliveTimer());
+            HttpRequest *req = std::any_cast<HttpRequest>(&context_);
+            loop_->delTimer(req->getRequestTimer());
+            //loop_->delTimer(req->getAliveTimer());
         }
+        else
+        {
+            LOG_INFO << "Request is null.";
+        }
+        */
+
+        event_.remove();
         if (closeCallback_)
-            closeCallback_(event_.getFd());
+            closeCallback_(shared_from_this());
     }
 }
 

@@ -31,7 +31,7 @@
                 "/usr/include/c++/7",
                 "/usr/include/c++/7/bits/*",
                 "/usr/local/include",
-                "/usr/lib/clang/4.0.1/include",
+                "/usr/lib/clang/5.0.0/include",
                 "/usr/include/x86_64-linux-gnu",
                 "/usr/include",
                 "${workspaceRoot}"
@@ -44,7 +44,7 @@
                     "/usr/include/c++/7",
                     "/usr/include/c++/7/bits/*",
                     "/usr/local/include",
-                    "/usr/lib/clang/4.0.1/include",
+                    "/usr/lib/clang/5.0.0/include",
                     "/usr/include/x86_64-linux-gnu",
                     "/usr/include",
                     "${workspaceRoot}"

@@ -46,23 +46,21 @@ class HttpRequest
     {
         return path_;
     }
-    const event::Timer &getRequestTimer() const
+    event::TimerKey getRequestTimerKey() const
     {
-        return requestTimer_;
+        return requestTimerKey_;
     }
-    void setRequestTimer(uint64_t secs,event::Timer::TimeoutCallback cb)
+    void setRequestTimerKey(const event::TimerKey &tk) 
     {
-        requestTimer_.setTime(secs);
-        requestTimer_.setCallback(std::move(cb));
+        requestTimerKey_ = tk;
     }
-    const event::Timer &getAliveTimer() const
+    event::TimerKey getAliveTimerKey() const
     {
-        return aliveTimer_;
+        return aliveTimerKey_;
     }
-    void setAliveTimer(uint64_t secs,event::Timer::TimeoutCallback cb)
+    void setAliveTimerKey(const event::TimerKey &tk) 
     {
-        aliveTimer_.setTime(secs);
-        aliveTimer_.setCallback(std::move(cb));
+        aliveTimerKey_ = tk;
     }
 
     //重置http请求，方便后续复用
@@ -87,9 +85,9 @@ class HttpRequest
     //方便请求找到其上层connection对象
     std::weak_ptr<Connection> owner_;
     //每个请求需要一个定时器以便超时关闭连接
-    event::Timer requestTimer_;
+    event::TimerKey requestTimerKey_;
     //长连接定时器
-    event::Timer aliveTimer_;
+    event::TimerKey aliveTimerKey_;
 };
 } // namespace net
 

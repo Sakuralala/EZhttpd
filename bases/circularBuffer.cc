@@ -13,7 +13,7 @@ void CircularBuffer::resize()
     std::vector<char> buffer;
     buffer.reserve(buffer_.capacity() * 2);
     //虽然不太可能出现 还是要检测下当前buffer_是否为空
-    if(isEmpty())
+    if (isEmpty())
         readIndex_ = writeIndex_ = 0;
     if (readIndex_ < writeIndex_)
     {
@@ -33,14 +33,14 @@ void CircularBuffer::resize()
 }
 std::string CircularBuffer::getMsg(const char *beg, int len) const
 {
-    if(isEmpty()||len>size()||beg>end()||beg<begin()||beg+len>end())
+    if (isEmpty() || len > size() || beg > end() || beg < begin() || beg + len > end())
         return "";
     int len1 = &*buffer_.begin() + buffer_.capacity() - beg;
-    if (beg < end() || len <=len1)
-        return std::string(beg,len);
+    if (beg < end() || len <= len1)
+        return std::string(beg, len);
     else
     {
-        return std::string(beg, len1) + std::string(&*buffer_.begin(),len-len1);
+        return std::string(beg, len1) + std::string(&*buffer_.begin(), len - len1);
     }
 }
 //FIXME:大小检查
@@ -175,7 +175,7 @@ int CircularBuffer::recv(int fd)
         //理即可 对于后者，此时再写会出错,所以设置一个定时器，超时直接关闭连接
         {
             //存在这种情况，对端关闭连接导致读事件就绪，而当前读缓冲区为空导致前面将读写索引置0了,这里需要改回来
-            if(!total&&!readIndex_&&!writeIndex_)
+            if (!total && !readIndex_ && !writeIndex_)
                 readIndex_ = writeIndex_ = -1;
             LOG_DEBUG << "Peer closed connection, socket:" << fd;
             break;
@@ -215,7 +215,7 @@ int CircularBuffer::send(int fd, const char *msg, int len)
                 {
                     if (errno == EPIPE)
                     {
-                        LOG_INFO << "Write failed because peer closed connection,socket:" << fd;
+                        LOG_DEBUG << "Write failed because peer closed connection,socket:" << fd;
                     }
                     else
                     {
@@ -240,7 +240,7 @@ int CircularBuffer::send(int fd, const char *msg, int len)
     if (len) //把没发完的保存起来
     {
         //防止此时缓冲区为空
-        if(isEmpty())
+        if (isEmpty())
             readIndex_ = writeIndex_ = 0;
         if (remain() < len)
             resize();
