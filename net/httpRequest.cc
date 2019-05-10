@@ -6,7 +6,7 @@
 namespace net
 {
 HttpRequest::HttpRequest(const ConnectionPtr &conn) : status_(REQUEST_METHOD),
-                                                      owner_(conn)
+                                                      owner_(conn), requestTimerKey_(nullptr), aliveTimerKey_(nullptr)
 {
 }
 HttpRequest::~HttpRequest() = default;
@@ -19,7 +19,7 @@ ParseStatus HttpRequest::parse(bases::UserBuffer &buf)
         return parseMethod(buf);
     else if (status_ == REQUEST_URL)
         return parseURL(buf);
-    else if (status_ == PROTOCOL_VERSION)
+    else if (status_ == PROTOCOL)
         return parseProtocol(buf);
     else if (status_ == HEADERS)
         return parseHeader(buf);
@@ -44,7 +44,7 @@ ParseStatus HttpRequest::parseMethod(bases::UserBuffer &buf)
             method_ = PUT;
         else
         {
-            LOG_ERROR << "Unknown method." << buf.getMsg(buf.begin(), pos);
+            LOG_ERROR << "Unknown method:" << buf.getMsg(buf.begin(), pos);
             status_ = REQUEST_METHOD_ERROR;
             return REQUEST_METHOD_ERROR;
         }
@@ -57,7 +57,7 @@ ParseStatus HttpRequest::parseMethod(bases::UserBuffer &buf)
             method_ = POST;
         else
         {
-            LOG_ERROR << "Unknown method." << buf.getMsg(buf.begin(), pos);
+            LOG_ERROR << "Unknown method:" << buf.getMsg(buf.begin(), pos);
             status_ = REQUEST_METHOD_ERROR;
             return REQUEST_METHOD_ERROR;
         }
@@ -75,7 +75,7 @@ ParseStatus HttpRequest::parseMethod(bases::UserBuffer &buf)
     }
     else
     {
-        LOG_ERROR << "Unknown method." << buf.getMsg(buf.begin(), pos);
+        LOG_ERROR << "Unknown method:" << buf.getMsg(buf.begin(), pos);
         status_ = REQUEST_METHOD_ERROR;
         return REQUEST_METHOD_ERROR;
     }
@@ -106,7 +106,7 @@ ParseStatus HttpRequest::parseURL(bases::UserBuffer &buf)
     }
     path_ = url_.substr(slashPos);
     buf.retrieve(len + 1);
-    status_ = PROTOCOL_VERSION;
+    status_ = PROTOCOL;
     return parseProtocol(buf);
 }
 ParseStatus HttpRequest::parseProtocol(bases::UserBuffer &buf)
@@ -115,7 +115,7 @@ ParseStatus HttpRequest::parseProtocol(bases::UserBuffer &buf)
     /******************************解析协议版本*****************************/
     auto pos = buf.findCRLF();
     if (!pos)
-        return PROTOCOL_VERSION;
+        return PROTOCOL;
     if (!buf.compare("HTTP/", 5))
     {
         LOG_ERROR << "Unknown protocol:" << buf.getMsg(buf.begin(), pos);
@@ -131,7 +131,7 @@ ParseStatus HttpRequest::parseProtocol(bases::UserBuffer &buf)
     else
     {
         LOG_ERROR << "Unsupported http version.";
-        status_ = PROTOCOL_VERSION_ERROR;
+        status_ = PROTOCOL_ERROR;
         return status_;
     }
     //example:1.1\r\n
@@ -183,15 +183,15 @@ ParseStatus HttpRequest::parseHeader(bases::UserBuffer &buf)
 }
 ParseStatus HttpRequest::parseContent(bases::UserBuffer &buf)
 {
-    if(headers_.find("Content-Length")!=headers_.end()||headers_.find("content-length")!=headers_.end())
+    if (headers_.find("Content-Length") != headers_.end() || headers_.find("content-length") != headers_.end())
     {
         int len = std::stoi(headers_["Content-Length"]);
         //解析请求正文
-        if(buf.size()<len)
+        if (buf.size() < len)
             return status_;
         else
         {
-            content_ = std::move(buf.getMsg(buf.begin(),len));
+            content_ = std::move(buf.getMsg(buf.begin(), len));
         }
     }
     status_ = DONE;

@@ -2,15 +2,18 @@
 #include <sys/socket.h>
 #include "server.h"
 #include "connection.h"
+#include "../event/timer.h"
 #include "../event/eventLoop.h"
 #include "../log/logger.h"
 #define MAX_CONN 2147483647
 namespace net
 {
-Server::Server(event::EventLoop *loop, const std::vector<int> &ports) : running_(false), total_(0), loop_(loop), acceptor_(loop_), bindingPorts_(ports)
+Server::Server(event::EventLoop *loop, const std::vector<int> &ports, int interval) : running_(false), infoShowInterval_(interval), total_(0), maxConcurrentNumber_(0), loop_(loop), timerKey_(nullptr), acceptor_(loop_), bindingPorts_(ports)
 {
     if (!loop_)
         LOG_FATAL << "Create server failed,event loop can't be null.";
+
+    timerKey_ = loop_->addTimer(infoShowInterval_, std::bind(&net::Server::connectionInfoShow, this), 0);
     //setReadCallback(std::bind(&net::Server::discardMsg, this, std::placeholders::_1, std::placeholders::_2));
 }
 Server::~Server()
@@ -21,6 +24,11 @@ void Server::discardMsg(const ConnectionPtr &ptr, bases::UserBuffer &buf)
 {
     ptr->send("HTTP/1.1 404 Not Found\r\n\r\n", 30);
 }
+void Server::connectionInfoShow() const
+{
+    LOG_INFO << "Current connection number:" << connected_.size() << ", max concurrent connection number:" << maxConcurrentNumber_ << ", total connection number:" << total_;
+}
+
 //新连接建立成功后需要将其按照某种策略分配到一个sub reactor中
 //还有一种做法就是主reactor只传递新建立的套接字描述符给sub reactor，后续的创建Connection由sub reactor来做，这样的话，主reactor就不知道当前有多少个具体连接了 而且需要另外设置Connection的回调
 void Server::distributeConnetion(int acceptFd, const struct sockaddr_in &clientAddr)
@@ -45,7 +53,7 @@ void Server::distributeConnetion(int acceptFd, const struct sockaddr_in &clientA
      * **/
     loop_->assertInOwnerThread();
     total_ += 1;
-    LOG_DEBUG << "Total connection:" << total_;
+    //LOG_INFO << "Total connection:" << total_;
     auto loop = pool_.getNextLoop();
     /*
     EventPtr ev(new event::Event(acceptFd, loop));
@@ -69,8 +77,15 @@ void Server::distributeConnetion(int acceptFd, const struct sockaddr_in &clientA
     conn->setErrorCallback(errorCallback_);
     conn->setWriteCallback(writeCallback_);
     conn->setReadCallback(readCallback_);
-    conn->setCloseCallback(std::bind(&net::Server::delConnection, this, std::placeholders::_1));
+    //
+    conn->setCloseCallback(closeCallback_);
+    //conn->setCloseCallback(std::bind(&net::Server::delConnection, this, std::placeholders::_1));
     connected_.emplace(acceptFd, conn);
+    if (maxConcurrentNumber_ < connected_.size())
+    {
+        maxConcurrentNumber_ = connected_.size();
+        LOG_INFO << "Current cocurrent connection number:" << maxConcurrentNumber_;
+    }
     //修改感兴趣的事件需要在owner线程中进行，因为没有加锁
     loop->runInLoop(std::bind(&net::Connection::eventInit, conn.get()));
     auto peer = conn->getPeerAddress();
@@ -96,6 +111,8 @@ void Server::_delConnection(int fd)
     }
     LOG_DEBUG << "Current reference count:" << connected_[fd].use_count();
     connected_.erase(fd);
+    if (!connected_.size())
+        LOG_DEBUG << "No connetion now.";
 }
 
 void Server::run(int numThreads)

@@ -61,7 +61,7 @@ int main()
     ev.setReadCallback(&timeout);
     //保证对epoll对象的更新由owner线程完成
     globalLoop->runInLoop(std::bind(&event::Event::enableRead,&ev));
-    ::timerfd_settime(timerfd,0,&tm,nullptr);
+    ::timerfd_setTimer(timerfd,0,&tm,nullptr);
     t1.join();
     ::close(timerfd);
     */

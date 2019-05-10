@@ -1,4 +1,5 @@
 #include <sys/time.h>
+#include <unistd.h> //for access
 #include <string.h>
 #include "logFile.h"
 #include "logger.h"
@@ -14,6 +15,9 @@ void LogFile::append(const char *buf, size_t len)
 {
     //因为目前只有一个日志线程，所以用不用mutex其实一样
     MutexGuard mg(mutex_);
+    //防止中途把日志文件删了
+    //if (access(curFileName_.c_str(), F_OK))
+    //    rollFile();
     file_->append(buf, len);
     if (++cnt_ > flushInterval_)
         file_->flush();
@@ -30,8 +34,8 @@ void LogFile::append(const char *buf, size_t len)
 }
 void LogFile::rollFile()
 {
-    std::string name = getLogFileName();
-    file_.reset(new AppendFile(name));
+    curFileName_ = getLogFileName();
+    file_.reset(new AppendFile(curFileName_));
 }
 void LogFile::flush()
 {

@@ -6,6 +6,7 @@
  * 何传递Server的回调到Connection中?一种解决方法就是不传回调了，直接写死下面需要调用的函数，直接
  * 调用HttpServer::onMessage;    
  * **/
+#include <any>
 #include <functional>
 #include <memory>
 #include <utility>
@@ -29,15 +30,19 @@ enum ConnectionState
 };
 class Connection : public std::enable_shared_from_this<Connection>
 {
-  public:
+public:
     typedef std::shared_ptr<Connection> ConnectionPtr;
     typedef std::function<void(bases::UserBuffer &)> WriteCallback;
     //由于读事件读完之后或者是出错后需要发送响应，需要调用Connection::send,故需要这个参数
     typedef std::function<void(const ConnectionPtr &, bases::UserBuffer &)> ReadCallback;
     typedef std::function<void()> Callback;
-    typedef std::function<void(int)> CloseCallback;
+    typedef std::function<void(const ConnectionPtr&)> CloseCallback;
     Connection(event::EventLoop *loop, int fd, const sockaddr_in &local, const sockaddr_in &peer);
     ~Connection();
+    int getFd() const
+    {
+        return event_.getFd();
+    }
     void setReadCallback(ReadCallback cb)
     {
         readCallback_ = std::move(cb);
@@ -64,7 +69,7 @@ class Connection : public std::enable_shared_from_this<Connection>
     int send(const char *msg, int len);
     int send(const std::string &msg);
     int send(const HttpResponse &response);
-    void setContext(const std::shared_ptr<HttpRequest> &context)
+    void setContext(const std::any &context)
     {
         context_ = context;
     }
@@ -72,9 +77,9 @@ class Connection : public std::enable_shared_from_this<Connection>
     {
         state_ = state;
     }
-    std::shared_ptr<HttpRequest> getContext()
+    std::any *getContext()
     {
-        return context_;
+        return &context_;
     }
     event::EventLoop *getLoop() const
     {
@@ -90,7 +95,7 @@ class Connection : public std::enable_shared_from_this<Connection>
         out_.reset();
     }
 
-  private:
+private:
     ConnectionState state_;
     event::EventLoop *loop_;
     event::Event event_;
@@ -104,7 +109,9 @@ class Connection : public std::enable_shared_from_this<Connection>
     Callback errorCallback_;
     CloseCallback closeCallback_;
     //TODO:改为指向任意类型
-    std::shared_ptr<HttpRequest> context_;
+    //std::shared_ptr<HttpRequest> context_;
+    //内部通过std::unique_ptr管理对象的生命周期，无需操心
+    std::any context_;
 };
 } // namespace net
 #endif // !__connection_h
