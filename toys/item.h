@@ -31,7 +31,11 @@ public:
     Item(const string &key, size_t valLen, size_t flags);
     ~Item()
     {
+<<<<<<< HEAD
         ::delete[] data_;
+=======
+        ::delete [] data_;
+>>>>>>> effb2ec57d50be33aac302c9639036cc5c445937
     }
     size_t curDataLen() const
     {
@@ -46,6 +50,7 @@ public:
         return keyLen_ + valLen_;
     }
     size_t remainLength() const
+<<<<<<< HEAD
     {
         return totalLen() - curDataLen_;
     }
@@ -55,6 +60,17 @@ public:
     }
     size_t valLen() const
     {
+=======
+    {
+        return totalLen() - curDataLen_;
+    }
+    size_t keyLen() const
+    {
+        return keyLen_;
+    }
+    size_t valLen() const
+    {
+>>>>>>> effb2ec57d50be33aac302c9639036cc5c445937
         return valLen_;
     }
     string key() const

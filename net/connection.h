@@ -33,11 +33,19 @@ typedef std::shared_ptr<Connection> ConnectionPtr;
 class Connection : public std::enable_shared_from_this<Connection>
 {
 public:
+<<<<<<< HEAD
+=======
+    typedef std::shared_ptr<Connection> ConnectionPtr;
+>>>>>>> effb2ec57d50be33aac302c9639036cc5c445937
     typedef std::function<void(bases::UserBuffer &)> WriteCallback;
     //由于读事件读完之后或者是出错后需要发送响应，需要调用Connection::send,故需要这个参数
     typedef std::function<void(const ConnectionPtr &, bases::UserBuffer &)> ReadCallback;
     typedef std::function<void()> Callback;
+<<<<<<< HEAD
     typedef std::function<void(const ConnectionPtr &)> CloseCallback;
+=======
+    typedef std::function<void(const ConnectionPtr&)> CloseCallback;
+>>>>>>> effb2ec57d50be33aac302c9639036cc5c445937
     Connection(event::EventLoop *loop, int fd, const sockaddr_in &local, const sockaddr_in &peer);
     ~Connection();
     int getFd() const

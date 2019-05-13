@@ -1,8 +1,13 @@
 #include <iostream>
 #include "memcachedServer.h"
+<<<<<<< HEAD
 #include "memRequest.h"
 #include "../log/logger.h"
 #include "../net/connection.h"
+=======
+#include <iostream>
+
+>>>>>>> effb2ec57d50be33aac302c9639036cc5c445937
 namespace toys
 {
 MemcachedServer::MemcachedServer(event::EventLoop *loop, const std::vector<int> &ports) : net::Server(loop, ports)
