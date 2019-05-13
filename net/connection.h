@@ -28,15 +28,16 @@ enum ConnectionState
     DISCONNECTING,
     DISCONNECTED
 };
+class Connection;
+typedef std::shared_ptr<Connection> ConnectionPtr;
 class Connection : public std::enable_shared_from_this<Connection>
 {
 public:
-    typedef std::shared_ptr<Connection> ConnectionPtr;
     typedef std::function<void(bases::UserBuffer &)> WriteCallback;
     //由于读事件读完之后或者是出错后需要发送响应，需要调用Connection::send,故需要这个参数
     typedef std::function<void(const ConnectionPtr &, bases::UserBuffer &)> ReadCallback;
     typedef std::function<void()> Callback;
-    typedef std::function<void(const ConnectionPtr&)> CloseCallback;
+    typedef std::function<void(const ConnectionPtr &)> CloseCallback;
     Connection(event::EventLoop *loop, int fd, const sockaddr_in &local, const sockaddr_in &peer);
     ~Connection();
     int getFd() const

@@ -1,10 +1,40 @@
-#include "memcachedServer.h"
 #include <iostream>
-
+#include "memcachedServer.h"
+#include "memRequest.h"
+#include "../log/logger.h"
+#include "../net/connection.h"
 namespace toys
 {
-MemcachedServer::MemcachedServer(event::EventLoop *loop, const std::vector<int> &ports) : server_(loop, ports)
+MemcachedServer::MemcachedServer(event::EventLoop *loop, const std::vector<int> &ports) : net::Server(loop, ports)
 {
+    setReadCallback(std::bind(&toys::MemcachedServer::onMessage, this, std::placeholders::_1, std::placeholders::_2));
+    setCloseCallback(std::bind(&toys::MemcachedServer::onClose, this, std::placeholders::_1));
+}
+void MemcachedServer::onClose(const net::Server::ConnectionPtr &conn)
+{
+    delConnection(conn->getFd());
+}
+void MemcachedServer::onMessage(const net::Server::ConnectionPtr &conn, bases::UserBuffer &buf)
+{
+    LOG_DEBUG << "New request accepted.";
+    auto currentLoop = conn->getLoop();
+    if (!currentLoop)
+    {
+        LOG_ERROR << "No event loop owns this connection,closed.";
+        //服务端主动关闭连接
+        conn->handleClose();
+        return;
+    }
+    MemRequest *req = std::any_cast<MemRequest>(conn->getContext());
+    //首先创建一个http request请求的上下文
+    if (!req)
+    {
+        conn->setContext(MemRequest(conn, this));
+        req = std::any_cast<MemRequest>(conn->getContext());
+    }
+    auto state = req->parseandReply(buf);
+    if (state == MemRequest::State::QUIT)
+        conn->handleClose();
 }
 ItemPtr MemcachedServer::getItem(const ItemPtr &key)
 {

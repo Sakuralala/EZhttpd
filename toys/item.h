@@ -2,6 +2,9 @@
  * memcached toy version. 
  * Item is the basic datastructure.
 */
+#ifndef item_h
+#define item_h
+
 #include <stdlib.h>
 #include <memory>
 #include <string>
@@ -21,13 +24,14 @@ public:
         REPLACE,
         APPEND,
         PREPEND,
-        CAS
+        CAS,
+        UNKNOWN
     };
     Item() {}
     Item(const string &key, size_t valLen, size_t flags);
     ~Item()
     {
-        ::delete [] data_;
+        ::delete[] data_;
     }
     size_t curDataLen() const
     {
@@ -119,3 +123,4 @@ struct ItemswithLock
     bases::Mutex mutex_;
 };
 } // namespace toys
+#endif // !item
