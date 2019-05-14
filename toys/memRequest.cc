@@ -30,7 +30,6 @@ MemRequest::State MemRequest::parseandReply(bases::UserBuffer &buf)
                 bool success = server_->setItem(item_, policy_);
                 if (!noReply_)
                 {
-                    //TODO:reply
                     auto conn = owner_.lock();
                     if (conn)
                     {
@@ -40,6 +39,8 @@ MemRequest::State MemRequest::parseandReply(bases::UserBuffer &buf)
                         {
                             if (policy_ == Item::Policy::SET)
                                 conn->send("ERROR\r\n");
+                            else if (policy_ == Item::Policy::CAS)
+                                conn->send("EXISTS or NOT_FOUND\r\n");
                             else
                                 conn->send("NOT_STORED\r\n");
                         }
@@ -70,7 +71,6 @@ void MemRequest::parseCommandLine(const std::string &str)
     std::string word;
     while (record >> word)
         words.push_back(word);
-    //TODO:空的消息
     if (words[0] == "set" || words[0] == "add" || words[0] == "replace" || words[0] == "append" || words[0] == "prepend")
     {
         if (words[0] == "set")
@@ -85,7 +85,6 @@ void MemRequest::parseCommandLine(const std::string &str)
             policy_ = Item::Policy::PREPEND;
         if (words.size() != 4 && words.size() != 5)
         {
-            //TODO:wrong command line
             auto conn = owner_.lock();
             if (conn)
                 conn->send("Parse command wrong.\r\n");
@@ -100,7 +99,35 @@ void MemRequest::parseCommandLine(const std::string &str)
                     noReply_ = true;
                 else
                 {
-                    //TODO:wrong noreply
+                    auto conn = owner_.lock();
+                    if (conn)
+                        conn->send("Parse command wrong.\r\n");
+                    resetRequest();
+                }
+            }
+            state_ = VALUE;
+        }
+    }
+    else if (words[0] == "cas")
+    {
+        policy_ = Item::Policy::CAS;
+        if (words.size() != 5 && words.size() != 6)
+        {
+            auto conn = owner_.lock();
+            if (conn)
+                conn->send("Parse command wrong.\r\n");
+            resetRequest();
+        }
+        else
+        {
+            item_ = std::shared_ptr<Item>(new Item(words[1], std::stoul(words[3]) + 2, std::stoul(words[2])));
+            item_->setCas(std::stoul(words[4]));
+            if (words.size() == 6)
+            {
+                if (words.back() == "noreply")
+                    noReply_ = true;
+                else
+                {
                     auto conn = owner_.lock();
                     if (conn)
                         conn->send("Parse command wrong.\r\n");
@@ -114,7 +141,6 @@ void MemRequest::parseCommandLine(const std::string &str)
     {
         if (words.size() == 1)
         {
-            //TODO:unknown
             auto conn = owner_.lock();
             if (conn)
                 conn->send("Lack of key.\r\n");
@@ -130,8 +156,16 @@ void MemRequest::parseCommandLine(const std::string &str)
                 {
                     if (item)
                     {
-                        std::string reply("VALUE " + item->key() + " " + std::to_string(item->flag()) + " " + std::to_string(item->curValLen()-2) + "\r\n" + item->data() + "END\r\n");
-                        conn->send(reply);
+                        if (words[0] == "get")
+                        {
+                            std::string reply("VALUE " + item->key() + " " + std::to_string(item->flag()) + " " + std::to_string(item->curValLen() - 2) + "\r\n" + item->data() + "END\r\n");
+                            conn->send(reply);
+                        }
+                        else
+                        {
+                            std::string reply("VALUE " + item->key() + " " + std::to_string(item->flag()) + " " + std::to_string(item->curValLen() - 2) + " " + std::to_string(item->cas()) + "\r\n" + item->data() + "END\r\n");
+                            conn->send(reply);
+                        }
                     }
                     else
                         conn->send("VALUE\r\n\r\nEND\r\n");
@@ -144,7 +178,6 @@ void MemRequest::parseCommandLine(const std::string &str)
     {
         if (words.size() != 2 && words.size() != 3)
         {
-            //TODO:unknown
             auto conn = owner_.lock();
             if (conn)
                 conn->send("Parse command wrong.\r\n");
@@ -172,7 +205,6 @@ void MemRequest::parseCommandLine(const std::string &str)
     {
         if (words.size() != 1)
         {
-            //TODO:unkown
             auto conn = owner_.lock();
             if (conn)
                 conn->send("Parse command wrong.\r\n");
@@ -181,9 +213,42 @@ void MemRequest::parseCommandLine(const std::string &str)
         else
             state_ = QUIT;
     }
+    else if (words[0] == "version")
+    {
+        auto conn = owner_.lock();
+        if (conn)
+        {
+            if (words.size() != 1)
+                conn->send("Parse command wrong.\r\n");
+            else
+                conn->send("Ver 0.01.\r\n");
+        }
+        resetRequest();
+    }
+    else if (words[0] == "all")
+    {
+        auto conn = owner_.lock();
+        if (conn)
+        {
+            if (words.size() != 1)
+                conn->send("Parse command wrong.\r\n");
+            else
+            {
+                auto all(server_->getAll());
+                if (all.empty())
+                    conn->send("NONE\r\n");
+                conn->send("TOTAL:" + std::to_string(all.size()) + "\r\n");
+                for (auto item : all)
+                {
+                    std::string reply("VALUE " + item->key() + " " + std::to_string(item->flag()) + " " + std::to_string(item->curValLen() - 2) + "\r\n" + item->data() + "END\r\n");
+                    conn->send(reply);
+                }
+            }
+        }
+        resetRequest();
+    }
     else
     {
-        //TODO:unknown policy
         auto conn = owner_.lock();
         if (conn)
             conn->send("Unknown command.\r\n");

@@ -30,6 +30,17 @@ public:
     bool setItemwithoutNew(const ItemPtr &item, Item::Policy pol);
     Item getItemwithCopy(const ItemPtr &key);
     bool delItem(const ItemPtr &key);
+    std::vector<ItemPtr> getAll() 
+    {
+        std::vector<ItemPtr> ret;
+        for (int i = 0; i < ShardNumber; ++i)
+        {
+            bases::MutexGuard mg(itemsArr_[i].mutex_);
+            for(auto elem:itemsArr_[i].items_)
+                ret.push_back(elem);
+        }
+        return ret;
+    }
 
 private:
     //net::Server server_;

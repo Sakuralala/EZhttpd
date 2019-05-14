@@ -1,13 +1,8 @@
 #include <iostream>
 #include "memcachedServer.h"
-<<<<<<< HEAD
 #include "memRequest.h"
 #include "../log/logger.h"
 #include "../net/connection.h"
-=======
-#include <iostream>
-
->>>>>>> effb2ec57d50be33aac302c9639036cc5c445937
 namespace toys
 {
 MemcachedServer::MemcachedServer(event::EventLoop *loop, const std::vector<int> &ports) : net::Server(loop, ports)
@@ -48,20 +43,23 @@ ItemPtr MemcachedServer::getItem(const ItemPtr &key)
     auto ite = items.find(key);
     return ite == items.end() ? ItemPtr() : *ite;
 }
-//用于get/set比值高的情景，通过把get的临界区的耗时转移到set中来提高性能(set通过先创建新的再删除旧的的方式来解决get/set的race condition)
+//用于get/set比值高的情景，通过把gecaseap耗时转移到set中来提高性能(set通过先创建新的再删除旧的的方式来解决get/set的race condition) 注意每次更新item后cas值也会更新
 bool MemcachedServer::setItem(const ItemPtr &item, Item::Policy pol)
 {
     auto &items = itemsArr_[item->hash() % ShardNumber].items_;
     bases::MutexGuard mg(itemsArr_[item->hash() % ShardNumber].mutex_);
     auto ite = items.find(item);
-    if (pol == Item::Policy::SET || pol == Item::Policy::ADD || pol == Item::Policy::REPLACE)
+    if (pol == Item::Policy::SET || pol == Item::Policy::ADD || pol == Item::Policy::REPLACE || pol == Item::Policy::CAS)
     {
         if (ite != items.end())
         {
-            if (pol == Item::Policy::ADD)
+            if (pol == Item::Policy::ADD || item->cas() != (*ite)->cas())
                 return false;
+            // item->setCas((*ite)->cas());
             items.erase(ite);
         }
+        else if (pol == Item::Policy::CAS)
+            return false;
         items.insert(item);
         //std::cout << item.use_count() << std::endl;
         return true;
@@ -73,22 +71,22 @@ bool MemcachedServer::setItem(const ItemPtr &item, Item::Policy pol)
         size_t len = (*ite)->endwithCRLF() ? item->curValLen() - 2 : item->curValLen();
         if (ite == items.end() || (*ite)->remainLength() < len)
             return false;
-        //TODO:casVal
-        auto newItemPtr(std::make_shared<Item>(item->key(), (*ite)->valLen(), item->flag()));
+        auto newItem(std::make_shared<Item>(item->key(), (*ite)->valLen(), item->flag()));
+        //newItem->setCas((*ite)->cas());
         if (pol == Item::Policy::APPEND)
         {
             if ((*ite)->endwithCRLF())
-                newItemPtr->appendData((*ite)->data(), (*ite)->curValLen() - 2);
-            newItemPtr->appendData(item->data(), item->curValLen());
+                newItem->appendData((*ite)->data(), (*ite)->curValLen() - 2);
+            newItem->appendData(item->data(), item->curValLen());
         }
         else
         {
             if (item->endwithCRLF())
-                newItemPtr->appendData(item->data(), item->curValLen() - 2);
-            newItemPtr->appendData((*ite)->data(), (*ite)->curValLen());
+                newItem->appendData(item->data(), item->curValLen() - 2);
+            newItem->appendData((*ite)->data(), (*ite)->curValLen());
         }
         items.erase(ite);
-        items.insert(newItemPtr);
+        items.insert(newItem);
         return true;
     }
     return false;
