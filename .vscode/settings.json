@@ -67,7 +67,8 @@
         "unordered_set": "cpp",
         "*.md": "markdown",
         "forward_list": "cpp",
-        "any": "cpp"
+        "any": "cpp",
+        "iterator": "cpp"
     },
     "C_Cpp.intelliSenseEngineFallback": "Enabled"
 }

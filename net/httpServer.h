@@ -12,7 +12,7 @@ class EventLoop;
 }
 namespace bases
 {
-class CircularBuffer;
+class CharCircularBuffer;
 }
 namespace net
 {
@@ -21,7 +21,7 @@ class HttpServer : public Server
 public:
   HttpServer(event::EventLoop *loop, const std::vector<int> &ports);
   ~HttpServer();
-  void onMessage(const ConnectionPtr &conn, bases::CircularBuffer &buf);
+  void onMessage(const ConnectionPtr &conn, bases::CharCircularBuffer &buf);
   void onClose(const ConnectionPtr &conn);
   void setRequestTimeout(uint32_t sec)
   {

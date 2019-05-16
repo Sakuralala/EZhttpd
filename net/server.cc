@@ -53,18 +53,8 @@ void Server::distributeConnetion(int acceptFd, const struct sockaddr_in &clientA
      * **/
     loop_->assertInOwnerThread();
     total_ += 1;
-    //LOG_INFO << "Total connection:" << total_;
+   LOG_DEBUG << "Total connection:" << total_;
     auto loop = pool_.getNextLoop();
-    /*
-    EventPtr ev(new event::Event(acceptFd, loop));
-    ev->setReadCallback(readCallback_);
-    ev->setErrorCallback(errorCallback_);
-    ev->setWriteCallback(writeCallback_);
-    //TODO:修改可同时打开的文件描述符的最值
-    //ref:2
-    connected.emplace(acceptFd, ev);
-    loop->runInLoop(std::bind(&event::Event::enableAll, ev.get()));
-    */
     struct sockaddr_in localAddr;
     socklen_t localAddrLen = sizeof(localAddr);
     if (getsockname(acceptFd, (struct sockaddr *)&localAddr, &localAddrLen))
@@ -72,7 +62,6 @@ void Server::distributeConnetion(int acceptFd, const struct sockaddr_in &clientA
         LOG_ERROR << "Get sock name error in socket:" << acceptFd;
         return;
     }
-    //ref:1
     ConnectionPtr conn(new Connection(loop, acceptFd, localAddr, clientAddr));
     conn->setErrorCallback(errorCallback_);
     conn->setWriteCallback(writeCallback_);
@@ -88,8 +77,8 @@ void Server::distributeConnetion(int acceptFd, const struct sockaddr_in &clientA
     }
     //修改感兴趣的事件需要在owner线程中进行，因为没有加锁
     loop->runInLoop(std::bind(&net::Connection::eventInit, conn.get()));
-    auto peer = conn->getPeerAddress();
-    auto local = conn->getLocalAddress();
+    //auto peer = conn->getPeerAddress();
+    //auto local = conn->getLocalAddress();
 }
 //此函数一般都是在子线程close对应connection时进行回调，即由其他线程调用，为了防止race condition
 //所以需要runInLoop

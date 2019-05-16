@@ -11,7 +11,8 @@
 #include <memory>
 #include <utility>
 #include <netinet/in.h>
-#include "../bases/circularBuffer.h"
+//#include "../bases/circularBuffer.h"
+#include "../bases/newCircularBuffer.h"
 #include "../event/event.h"
 #include "../event/timer.h"
 namespace event

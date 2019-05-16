@@ -6,7 +6,8 @@
 #include "item.h"
 #include "memcachedServer.h"
 #include "../net/connection.h"
-#include "../bases/circularBuffer.h"
+//#include "../bases/circularBuffer.h"
+#include "../bases/newCircularBuffer.h"
 
 namespace toys
 {

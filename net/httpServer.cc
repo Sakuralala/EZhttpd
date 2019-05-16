@@ -4,7 +4,8 @@
 #include "httpRequest.h"
 #include "httpResponse.h"
 #include "../event/eventLoop.h"
-#include "../bases/circularBuffer.h"
+//#include "../bases/circularBuffer.h"
+#include "../bases/newCircularBuffer.h"
 #include "../event/timer.h"
 #include "../log/logger.h"
 namespace net
@@ -88,7 +89,7 @@ void HttpServer::onMessage(const ConnectionPtr &conn, bases::UserBuffer &buf)
             return;
         }
         conn->setState(DISCONNECTING);
-        if (buf.isEmpty())
+        if (buf.empty())
         {
             conn->handleClose();
         }
@@ -114,7 +115,7 @@ void HttpServer::onMessage(const ConnectionPtr &conn, bases::UserBuffer &buf)
             //连接状态为准备断开状态，以便写事件回调在写完响应到套接字内核缓冲区后能够及时关闭连接；
             conn->setState(DISCONNECTING);
             //写完直接关
-            if (buf.isEmpty())
+            if (buf.empty())
             {
                 conn->handleClose();
             }

@@ -8,12 +8,15 @@
 #include <unordered_map>
 #include <memory>
 #include "acceptor.h"
-#include "../bases/circularBuffer.h"
+//#include "../bases/circularBuffer.h"
+#include "../bases/newCircularBuffer.h"
 #include "../event/IOThreadPool.h"
 #include "../event/timer.h"
+#include "../event/eventLoop.h"
+
 namespace event
 {
-class EventLoop;
+//class EventLoop;
 class Event;
 } // namespace event
 //struct sockaddr_in;
@@ -30,10 +33,14 @@ public:
   typedef std::function<void(const ConnectionPtr &)> CloseCallback;
   //typedef std::shared_ptr<event::Event> EventPtr;
 
-  Server(event::EventLoop *loop, const std::vector<int> &ports,int interval=30);
+  Server(event::EventLoop *loop, const std::vector<int> &ports, int interval = 30);
   virtual ~Server();
   void run(int numThreads);
   void stop();
+  event::EventLoop *getLoop()
+  {
+    return loop_;
+  }
   //新连接建立的回调
   void distributeConnetion(int acceptFd, const struct sockaddr_in &clientAddr);
   void setReadCallback(ReadCallback cb)
@@ -62,6 +69,7 @@ public:
   //idel function, just show current connetion number.
   //run every 30s.
   void connectionInfoShow() const;
+
 protected:
   //当前连接的套接字描述符->对于的Event
   std::unordered_map<int, ConnectionPtr> connected_;

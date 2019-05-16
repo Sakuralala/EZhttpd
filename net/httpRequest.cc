@@ -32,50 +32,60 @@ ParseStatus HttpRequest::parseMethod(bases::UserBuffer &buf)
 {
     LOG_DEBUG << "Parsing request method.....";
     auto pos = buf.find(' ');
-    if (!pos)
+    if (pos == buf.end())
         return REQUEST_METHOD;
-    int len = buf.length(buf.begin(), pos);
+    auto len = pos - buf.begin();
+    //assert len != -1
+    /*
+    if (len == -1)
+    {
+        LOG_ERROR << "Read Circular buffer error.";
+        status_ = REQUEST_METHOD_ERROR;
+        return REQUEST_METHOD_ERROR;
+    }
+    */
+    auto method(buf.getMsg(buf.begin(), len));
     /*****************解析请求方法***************************/
     if (len == 3)
     {
-        if (buf.compare("GET", len))
+        if (method == "GET")
             method_ = GET;
-        else if (buf.compare("PUT", len))
+        else if (method == "PUT")
             method_ = PUT;
         else
         {
-            LOG_ERROR << "Unknown method:" << buf.getMsg(buf.begin(), pos);
+            LOG_ERROR << "Unknown method:" << method;
             status_ = REQUEST_METHOD_ERROR;
             return REQUEST_METHOD_ERROR;
         }
     }
     else if (len == 4)
     {
-        if (buf.compare("HEAD", len))
+        if (method == "HEAD")
             method_ = HEAD;
-        else if (buf.compare("POST", len))
+        else if (method == "POST")
             method_ = POST;
         else
         {
-            LOG_ERROR << "Unknown method:" << buf.getMsg(buf.begin(), pos);
+            LOG_ERROR << "Unknown method:" << method;
             status_ = REQUEST_METHOD_ERROR;
             return REQUEST_METHOD_ERROR;
         }
     }
     else if (len == 6)
     {
-        if (buf.compare("DELETE", len))
+        if (method == "DELETE")
             method_ = DELETE;
         else
         {
-            LOG_ERROR << "Unknown method:" << buf.getMsg(buf.begin(), pos);
+            LOG_ERROR << "Unknown method:" << method;
             status_ = REQUEST_METHOD_ERROR;
             return REQUEST_METHOD_ERROR;
         }
     }
     else
     {
-        LOG_ERROR << "Unknown method:" << buf.getMsg(buf.begin(), pos);
+        LOG_ERROR << "Unknown method:" << method;
         status_ = REQUEST_METHOD_ERROR;
         return REQUEST_METHOD_ERROR;
     }
@@ -88,14 +98,11 @@ ParseStatus HttpRequest::parseURL(bases::UserBuffer &buf)
     LOG_DEBUG << "Parsing request url.....";
     /****************************解析url********************************/
     auto pos = buf.find(' ');
-    if (!pos)
+    if (pos == buf.end())
         return REQUEST_URL;
     //move sematic
-    //FIXME:keep-alive情况下，并发量一上来会导致解析出错，url变为GET
-    //经排查发现是connection的buffer没有重置；后续发现buffer内部处理有问题，
-    //简单来说，我把vector.size()和vector.capacity()搞混了
     url_ = buf.getMsg(buf.begin(), pos);
-    auto len = buf.length(buf.begin(), pos);
+    auto len = pos - buf.begin();
     //move sematic
     auto slashPos = url_.find('/');
     if (slashPos == std::string::npos)
@@ -114,23 +121,25 @@ ParseStatus HttpRequest::parseProtocol(bases::UserBuffer &buf)
     LOG_DEBUG << "Parsing protocol.....";
     /******************************解析协议版本*****************************/
     auto pos = buf.findCRLF();
-    if (!pos)
+    if (pos == buf.end())
         return PROTOCOL;
-    if (!buf.compare("HTTP/", 5))
+    auto protocol(buf.getMsg(buf.begin(), 5));
+    if (protocol != "HTTP/")
     {
-        LOG_ERROR << "Unknown protocol:" << buf.getMsg(buf.begin(), pos);
+        LOG_ERROR << "Unknown protocol:" << protocol;
         status_ = PROTOCOL_ERROR;
         return status_;
     }
     //"http/"
     buf.retrieve(5);
-    if (buf.compare("1.1", 3))
+    auto version(buf.getMsg(buf.begin(), 3));
+    if (version == "1.1")
         version_ = Ver_11;
-    else if (buf.compare("1.0", 3))
+    else if (version == "1.0")
         version_ = Ver_10;
     else
     {
-        LOG_ERROR << "Unsupported http version.";
+        LOG_ERROR << "Unsupported http version." << version;
         status_ = PROTOCOL_ERROR;
         return status_;
     }
@@ -146,7 +155,7 @@ ParseStatus HttpRequest::parseHeader(bases::UserBuffer &buf)
     while (true)
     {
         auto pos = buf.findCRLF();
-        if (!pos)
+        if (pos == buf.end())
             return HEADERS;
         auto header(buf.getMsg(buf.begin(), pos));
         LOG_DEBUG << "Header:" << header << ",length:" << header.length() << "\n";
@@ -190,9 +199,7 @@ ParseStatus HttpRequest::parseContent(bases::UserBuffer &buf)
         if (buf.size() < len)
             return status_;
         else
-        {
             content_ = std::move(buf.getMsg(buf.begin(), len));
-        }
     }
     status_ = DONE;
     return status_;

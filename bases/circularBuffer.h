@@ -17,7 +17,7 @@ private:
   static const int InitialSize = 4096;
 
 public:
-  CircularBuffer() : readIndex_(-1), writeIndex_(-1)
+  CircularBuffer() : head_(-1), tail_(-1)
   {
     buffer_.reserve(InitialSize);
   }
@@ -26,7 +26,7 @@ public:
   {
     if (isEmpty())
       return 0;
-    return (writeIndex_ - readIndex_ + buffer_.capacity()) % buffer_.capacity();
+    return (tail_ + buffer_.capacity() - head_) % buffer_.capacity();
   }
   int remain() const
   {
@@ -44,63 +44,62 @@ public:
   int sendRemain(int fd);
   bool isFull() const
   {
-    return readIndex_ != -1 && readIndex_ == writeIndex_;
+    return head_ != -1 && head_ == tail_;
   }
   bool isEmpty() const
   {
-    return readIndex_ == -1;
+    return head_ == -1;
   }
   const char *begin() const
   {
     if (isEmpty())
       return nullptr;
-    return &*buffer_.begin() + readIndex_;
+    return &*buffer_.begin() + head_;
   }
   const char *end() const
   {
     if (isEmpty())
       return nullptr;
-    return &*buffer_.begin() + writeIndex_;
+    return &*buffer_.begin() + tail_;
   }
-  //方便解析http请求头
+  //TODO:以下均为为了方便解析http请求而写的，看着很膈应
+  //找某个元素、计算两个位置间的距离、比较某段和一个字符串、取得某段数据
+  //
   const char *findCRLF() const;
   const char *find(char ch) const;
   int length(const char *beg, const char *end)
   {
     if (isEmpty())
       return 0;
-    return (end - beg + buffer_.capacity()) % buffer_.capacity();
+    return (end + buffer_.capacity() - beg) % buffer_.capacity();
   }
   bool compare(const char *s, int len) const;
   std::string getMsg(const char *beg, const char *end) const;
   std::string getMsg(const char *beg, int len) const;
   std::string getAll() const;
-  //readIndex_前进len字节
+  //head_前进len字节
   bool retrieve(int len)
   {
-    //FIXME:不是size()而是remain()
-    //FIXED:above
-    if (len > remain())
+    if (len > size())
       return false;
-    readIndex_ = (readIndex_ + len) % buffer_.capacity();
+    head_ = (head_ + len) % buffer_.capacity();
     //读缓冲区唯一一种会导致缓冲区变为空的情况 即读缓冲区中的数据已经被解析完了
-    if (readIndex_ >= writeIndex_)
-      readIndex_ = writeIndex_ = -1;
+    if (head_ >= tail_)
+      head_ = tail_ = -1;
     return true;
   }
   void reset()
   {
-    readIndex_ = writeIndex_ = -1;
+    head_ = tail_ = -1;
   }
 
 private:
   std::vector<char> buffer_;
-  //readIndex==writeIndex时如何判断当前缓冲区是满还是空?
+  //head==tail时如何判断当前缓冲区是满还是空?
   //为空时置均为-1
-  int readIndex_;
-  int writeIndex_;
+  int head_;
+  int tail_;
   void resize();
 };
-typedef CircularBuffer UserBuffer;
 } // namespace bases
 #endif

@@ -17,7 +17,7 @@ MemRequest::State MemRequest::parseandReply(bases::UserBuffer &buf)
     while (true)
     {
         auto crlf = buf.findCRLF();
-        if (crlf)
+        if (crlf != buf.end())
         {
             auto msg(buf.getMsg(buf.begin(), crlf));
             LOG_DEBUG << "Message:" << msg;
@@ -26,7 +26,7 @@ MemRequest::State MemRequest::parseandReply(bases::UserBuffer &buf)
             else if (state_ == VALUE)
             {
                 if (item_)
-                    item_->appendData(buf.getMsg(buf.begin(), crlf) + "\r\n", buf.length(buf.begin(), crlf) + 2);
+                    item_->appendData(buf.getMsg(buf.begin(), crlf) + "\r\n", crlf - buf.begin() + 2);
                 bool success = server_->setItem(item_, policy_);
                 if (!noReply_)
                 {
@@ -48,7 +48,7 @@ MemRequest::State MemRequest::parseandReply(bases::UserBuffer &buf)
                 }
                 resetRequest();
             }
-            buf.retrieve(buf.length(buf.begin(), crlf) + 2);
+            buf.retrieve(crlf - buf.begin() + 2);
         }
         else
             break;
@@ -212,6 +212,28 @@ void MemRequest::parseCommandLine(const std::string &str)
         }
         else
             state_ = QUIT;
+    }
+    else if (words[0] == "shutdown")
+    {
+        auto conn = owner_.lock();
+        if (conn)
+        {
+            if (words.size() != 1)
+            {
+                conn->send("Parse command wrong.\r\n");
+                resetRequest();
+            }
+            else
+            {
+                conn->handleClose();
+                //4
+                LOG_DEBUG << "After close,current connection reference count:" << conn.use_count();
+                auto addr = conn->getLocalAddress();
+                LOG_INFO << "Memcached server stopped by " << addr.first << ":" << addr.second;
+                auto loop = server_->getLoop();
+                loop->runInLoop(std::bind(&toys::MemcachedServer::stop, server_));
+            }
+        }
     }
     else if (words[0] == "version")
     {

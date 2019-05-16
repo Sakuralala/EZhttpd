@@ -14,21 +14,21 @@ void CircularBuffer::resize()
     buffer.reserve(buffer_.capacity() * 2);
     //虽然不太可能出现 还是要检测下当前buffer_是否为空
     if (isEmpty())
-        readIndex_ = writeIndex_ = 0;
-    if (readIndex_ < writeIndex_)
+        head_ = tail_ = 0;
+    if (head_ < tail_)
     {
-        memcpy(&*buffer.begin(), begin(), writeIndex_ - readIndex_);
+        memcpy(&*buffer.begin(), begin(), tail_ - head_);
     }
     else
     {
         //把后一部分移到前面
-        memcpy(&*buffer.begin(), begin(), buffer_.capacity() - readIndex_);
+        memcpy(&*buffer.begin(), begin(), buffer_.capacity() - head_);
         //把前一部分移到后面
-        memcpy(&*buffer.begin() + buffer_.capacity() - readIndex_, &*buffer_.begin(), readIndex_);
+        memcpy(&*buffer.begin() + buffer_.capacity() - head_, &*buffer_.begin(), head_);
     }
 
-    writeIndex_ = size();
-    readIndex_ = 0;
+    tail_ = size();
+    head_ = 0;
     buffer_.swap(buffer);
 }
 std::string CircularBuffer::getMsg(const char *beg, int len) const
@@ -44,6 +44,7 @@ std::string CircularBuffer::getMsg(const char *beg, int len) const
     }
 }
 //FIXME:大小检查
+//FIXED
 std::string CircularBuffer::getMsg(const char *beg, const char *end) const
 {
     if (beg < end)
@@ -62,11 +63,11 @@ bool CircularBuffer::compare(const char *s, int len) const
 {
     if (isEmpty())
         return false;
-    if (readIndex_ < writeIndex_)
+    if (head_ < tail_)
         return !strncmp(s, begin(), len);
     else
     {
-        int subLen = buffer_.capacity() - readIndex_;
+        int subLen = buffer_.capacity() - head_;
         return strncmp(s, begin(), subLen) & strncmp(s + subLen, &*buffer_.begin(), len - subLen);
     }
     //never go here.
@@ -77,7 +78,7 @@ const char *CircularBuffer::find(char ch) const
 {
     if (isEmpty())
         return nullptr;
-    if (readIndex_ < writeIndex_)
+    if (head_ < tail_)
         return std::find(begin(), end(), ch);
     else
     {
@@ -91,33 +92,33 @@ const char *CircularBuffer::find(char ch) const
     return nullptr;
 }
 //TODO:这里存在将数据传递给上层时的数据分段问题，即一部分在尾部，一部分在头部，那么该如何处理:
-//1.让上层进行处理，即需要先判断返回的crlf的位置和readIndex_的大小关系来决定拷贝1次还是两次；
+//1.让上层进行处理，即需要先判断返回的crlf的位置和head_的大小关系来决定拷贝1次还是两次；
 //2.内部处理，需要额外一次拷贝的开销；
 const char *CircularBuffer::findCRLF() const
 {
     if (isEmpty())
         return nullptr;
     //1.rw
-    if (readIndex_ < writeIndex_)
+    if (head_ < tail_)
     {
-        auto ite = std::find(buffer_.begin() + readIndex_, buffer_.begin() + writeIndex_, '\r');
-        if (ite < buffer_.begin() + writeIndex_ - 1 && *(ite + 1) == '\n')
+        auto ite = std::find(buffer_.begin() + head_, buffer_.begin() + tail_, '\r');
+        if (ite < buffer_.begin() + tail_ - 1 && *(ite + 1) == '\n')
             return &*ite;
     }
     else //2.wr
     {
-        auto ite = std::find(buffer_.begin() + readIndex_,
+        auto ite = std::find(buffer_.begin() + head_,
                              buffer_.begin() + buffer_.capacity(), '\r');
         if (ite == buffer_.begin() + buffer_.capacity())
         {
-            ite = std::find(buffer_.begin(), buffer_.begin() + writeIndex_, '\r');
+            ite = std::find(buffer_.begin(), buffer_.begin() + tail_, '\r');
             //这种情况下消息被分割为不相邻的两部分了
-            if (ite < buffer_.begin() + writeIndex_ - 1 && *(ite + 1) == '\n')
+            if (ite < buffer_.begin() + tail_ - 1 && *(ite + 1) == '\n')
                 return &*ite;
         }
         else if (ite == buffer_.begin() + buffer_.capacity() - 1)
         {
-            if (writeIndex_ && *buffer_.begin() == '\n')
+            if (tail_ && *buffer_.begin() == '\n')
                 return &*ite;
         }
         else
@@ -139,17 +140,17 @@ int CircularBuffer::recv(int fd)
         if (isFull())
             resize();
         if (isEmpty())
-            writeIndex_ = readIndex_ = 0;
-        if (writeIndex_ >= readIndex_)
+            tail_ = head_ = 0;
+        if (tail_ >= head_)
         {
             //NOTE:新版的STL中vector的迭代器不再是普通指针，而是normal_iterator类
-            LOG_DEBUG << "Try to read " << buffer_.capacity() - writeIndex_ << " bytes.";
-            n = ::read(fd, &*buffer_.begin() + writeIndex_, buffer_.capacity() - writeIndex_);
+            LOG_DEBUG << "Try to read " << buffer_.capacity() - tail_ << " bytes.";
+            n = ::read(fd, &*buffer_.begin() + tail_, buffer_.capacity() - tail_);
         }
         else
         {
-            LOG_DEBUG << "Try to read " << readIndex_ - writeIndex_ << " bytes.";
-            n = ::read(fd, &*buffer_.begin() + writeIndex_, readIndex_ - writeIndex_);
+            LOG_DEBUG << "Try to read " << head_ - tail_ << " bytes.";
+            n = ::read(fd, &*buffer_.begin() + tail_, head_ - tail_);
         }
         if (n == -1)
         {
@@ -175,13 +176,13 @@ int CircularBuffer::recv(int fd)
         //理即可 对于后者，此时再写会出错,所以设置一个定时器，超时直接关闭连接
         {
             //存在这种情况，对端关闭连接导致读事件就绪，而当前读缓冲区为空导致前面将读写索引置0了,这里需要改回来
-            if (!total && !readIndex_ && !writeIndex_)
-                readIndex_ = writeIndex_ = -1;
+            if (!total && !head_ && !tail_)
+                head_ = tail_ = -1;
             LOG_DEBUG << "Peer closed connection, socket:" << fd;
             break;
         }
         //n>0
-        writeIndex_ = (writeIndex_ + n) % buffer_.capacity();
+        tail_ = (tail_ + n) % buffer_.capacity();
         total += n;
         LOG_DEBUG << "Read " << n << " bytes from socket:" << fd;
         //<< ",message:\n"
@@ -241,23 +242,23 @@ int CircularBuffer::send(int fd, const char *msg, int len)
     {
         //防止此时缓冲区为空
         if (isEmpty())
-            readIndex_ = writeIndex_ = 0;
+            head_ = tail_ = 0;
         if (remain() < len)
             resize();
-        int tmp = buffer_.capacity() - writeIndex_;
+        int tmp = buffer_.capacity() - tail_;
         //writeIndex<readIndex的情况是肯定没resize过的(因为resize会手动调整前后两段)
         //那么说明writeIndex后面的剩余部分肯定比要写的长
         //||后面的就是writeIndex>=readIndex的情况，如果剩余部分够，写一次就行了
-        if (writeIndex_ < readIndex_ || len <= tmp)
+        if (tail_ < head_ || len <= tmp)
         {
-            memcpy(&*buffer_.begin() + writeIndex_, msg, len);
+            memcpy(&*buffer_.begin() + tail_, msg, len);
         }
-        else //writeIndex_>readIndex_&&len>=buffer_capacity()-writeIndex_
+        else //tail_>head_&&len>=buffer_capacity()-tail_
         {
-            memcpy(&*buffer_.begin() + writeIndex_, msg, tmp);
+            memcpy(&*buffer_.begin() + tail_, msg, tmp);
             memcpy(&*buffer_.begin(), msg + tmp, len - tmp);
         }
-        writeIndex_ = (writeIndex_ + len) % buffer_.capacity();
+        tail_ = (tail_ + len) % buffer_.capacity();
         //LOG_INFO << "Saved the remaining part.";
     }
     return total;
@@ -269,10 +270,10 @@ int CircularBuffer::sendRemain(int fd)
     int n = 0, total = 0;
     while (!isEmpty())
     {
-        if (readIndex_ < writeIndex_)
-            n = ::write(fd, &*buffer_.begin() + readIndex_, writeIndex_ - readIndex_);
+        if (head_ < tail_)
+            n = ::write(fd, &*buffer_.begin() + head_, tail_ - head_);
         else
-            n = ::write(fd, &*buffer_.begin() + readIndex_, buffer_.capacity() - readIndex_);
+            n = ::write(fd, &*buffer_.begin() + head_, buffer_.capacity() - head_);
 
         if (n < 0)
         {
@@ -301,12 +302,12 @@ int CircularBuffer::sendRemain(int fd)
         }
         //n>0
         LOG_DEBUG << "Write " << n << " bytes to socket:" << fd;
-        readIndex_ = (readIndex_ + n) % buffer_.capacity();
+        head_ = (head_ + n) % buffer_.capacity();
         total += n;
         //发完清零 写缓冲区唯一一种会导致缓冲区为空的情况 即写缓冲区内部剩余的数据全写到内核缓冲
         //区中了
-        if (readIndex_ == writeIndex_)
-            readIndex_ = writeIndex_ = -1;
+        if (head_ == tail_)
+            head_ = tail_ = -1;
     }
     return total;
 }

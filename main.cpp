@@ -26,11 +26,11 @@ int main()
   using toys::MemcachedServer;
   std::vector<int> ports{8888};
   EventLoop baseLoop;
-  //HttpServer server(&baseLoop, ports);
-  MemcachedServer server(&baseLoop,ports);
+  HttpServer server(&baseLoop, ports);
+  //MemcachedServer server(&baseLoop,ports);
   server.run(4);
   //测试下内存泄漏
-  //baseLoop.addTimer(40, std::bind(&net::HttpServer::stop, &server));
+  //baseLoop.addTimer(35, std::bind(&net::HttpServer::stop, &server));
   baseLoop.loop();
   LOG_INFO << "Server stopped.";
 }

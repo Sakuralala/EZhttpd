@@ -8,7 +8,8 @@
 #include <memory>
 #include "httpUtils.h"
 #include "../event/timer.h"
-#include "../bases/circularBuffer.h"
+//#include "../bases/circularBuffer.h"
+#include "../bases/newCircularBuffer.h"
 namespace net
 {
 class Connection;

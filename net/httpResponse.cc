@@ -579,7 +579,10 @@ HttpResponse::HttpResponse(HttpVersion ver, const std::string &path) : responseC
 
                                                                        responseLine_(VersionString[ver])
 {
-    constructResponse(path);
+    if (path == "/")
+        constructResponse("ok.html");
+    else
+        constructResponse(path);
 }
 //仅限404 408
 HttpResponse::HttpResponse(HttpVersion ver, int responseCode) : responseCode_(responseCode),
@@ -607,8 +610,14 @@ void HttpResponse::notFound()
 }
 void HttpResponse::constructResponse(const std::string &path)
 {
+    auto dotPos = path.find('.');
+    std::string type;
+    if (dotPos == std::string::npos)
+        type = "default";
+    else
+        type = path.substr(dotPos);
     //just for ico test.
-    if (path.substr(path.find('.')) == ".ico")
+    if (type == ".ico")
     {
         content_ += std::string(favicon, favicon + sizeof(favicon));
     }
@@ -617,7 +626,7 @@ void HttpResponse::constructResponse(const std::string &path)
         std::ifstream inFile(basePath_ + path);
         if (!inFile)
         {
-            LOG_ERROR << "Resource " << basePath_ + path << " not found.";
+            LOG_INFO << "Resource " << basePath_ + path << " not found.";
             responseCode_ = HTTP_NOT_FOUND;
             inFile.clear();
             inFile.open(basePath_ + "not_found.html");
@@ -646,11 +655,7 @@ void HttpResponse::constructResponse(const std::string &path)
     headers_.emplace("Server", "EZHttpd\r\n");
     headers_.emplace("Date", event::Timer(0).format() + "\r\n");
     headers_.emplace("Content-Length", std::to_string(content_.size()) + "\r\n");
-    auto type(path.substr(path.find('.')));
-    if (mime_.find(type) != mime_.end())
-        headers_.emplace("Content-Type", mime_[type] + "\r\n");
-    else
-        headers_.emplace("Content-Type", mime_["default"] + "\r\n");
+    headers_.emplace("Content-Type", mime_[type] + "\r\n");
 }
 int HttpResponse::sendResponse(const ConnectionPtr &conn) const
 {

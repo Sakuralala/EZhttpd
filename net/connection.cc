@@ -38,7 +38,10 @@ void Connection::handleRead()
     {
         int rc = in_.recv(event_.getFd());
         if (rc == -1)
+        {
+            LOG_DEBUG << "Connection is being closed.";
             handleClose();
+        }
         //对端关闭或半关闭了连接
         if (rc == 0)
             state_ = DISCONNECTING;
@@ -61,7 +64,7 @@ void Connection::handleWrite()
 
         if (writeCallback_)
             writeCallback_(out_);
-        if (state_ == DISCONNECTING && out_.isEmpty())
+        if (state_ == DISCONNECTING && out_.empty())
         {
             handleClose();
         }
