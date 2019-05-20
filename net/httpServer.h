@@ -18,11 +18,18 @@ namespace net
 {
 class HttpServer : public Server
 {
+  typedef std::function<void(const ConnectionPtr &)> ResponseCallback;
+
 public:
   HttpServer(event::EventLoop *loop, const std::vector<int> &ports);
   ~HttpServer();
-  void onMessage(const ConnectionPtr &conn, bases::CharCircularBuffer &buf);
   void onClose(const ConnectionPtr &conn);
+  void onMessage(const ConnectionPtr &conn, bases::CharCircularBuffer &buf);
+  void onResponse(const ConnectionPtr &conn);
+  void setResponseCallback(ResponseCallback cb)
+  {
+    responseCallback_ = std::move(cb);
+  }
   void setRequestTimeout(uint32_t sec)
   {
     requestTimeout_ = sec;
@@ -45,6 +52,8 @@ private:
   uint32_t requestTimeout_;
   //长连接保持时间
   uint32_t aliveTimeout_;
+  //解析完请求后如何发送响应的回调
+  ResponseCallback responseCallback_;
 };
 
 } // namespace net

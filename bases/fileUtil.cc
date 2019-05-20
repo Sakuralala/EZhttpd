@@ -1,14 +1,15 @@
+#include <stdio.h> //for stdout
 #include <string.h>
 #include <assert.h>
 #include <errno.h>
 #include "fileUtil.h"
 namespace bases
 {
-AppendFile::AppendFile(const std::string &pathname):file_(fopen(pathname.c_str(), "ae")), writeBytes(0)
+AppendFile::AppendFile(const std::string &pathname) : file_(fopen(pathname.c_str(), "ae")), writeBytes(0)
 {
     //file_ = fopen(pathname.c_str(),"ae");
-    if(!file_)
-        fprintf(stderr, "Create file stream failed:%s.,the file name is:%s.\n", strerror(errno),pathname.c_str());
+    if (!file_)
+        fprintf(stderr, "Create file stream failed:%s.,the file name is:%s.\n", strerror(errno), pathname.c_str());
     //设置流的缓冲区
     //setbuffer(file_, buffer_, sizeof buffer_);
     //TODO:比较是否使用这个缓冲区的效率
@@ -35,6 +36,10 @@ size_t AppendFile::append(const char *msg, size_t len)
     while (len)
     {
         size_t writed = fwrite(msg, 1, len, file_);
+#ifdef LOG_STDOUT 
+        //输出到标准输出
+        fwrite(msg, 1, len, stdout);
+#endif
         if (!writed)
         {
             int err = ferror(file_);

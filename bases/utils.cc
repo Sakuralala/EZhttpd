@@ -7,6 +7,28 @@
 #include "../log/logger.h"
 namespace bases
 {
+//  NOTE:多个连续的分隔符会被看作1个
+std::vector<std::string> split(const std::string &str, const char ch)
+{
+    int lastPos = 0;
+    while (lastPos < str.size() && str[lastPos] == ch)
+        lastPos++;
+    std::vector<std::string> ret;
+    int curPos = lastPos;
+    for (; curPos < str.size(); ++curPos)
+    {
+        if (str[curPos] == ch)
+        {
+            ret.push_back(str.substr(lastPos, curPos - lastPos));
+            while (curPos < str.size() && str[curPos] == ch)
+                curPos++;
+            lastPos = curPos--;
+        }
+    }
+    if (curPos > lastPos)
+        ret.push_back(str.substr(lastPos, curPos - lastPos));
+    return ret;
+}
 int listen(int port)
 {
     if (port <= 0)
@@ -41,7 +63,7 @@ int listen(int port)
         LOG_ERROR << "Bind socket error:" << strerror(errno);
         return -1;
     }
-    if (::listen(listenFd_,2048) == -1)
+    if (::listen(listenFd_, 2048) == -1)
     {
         LOG_ERROR << "Listen socket error:" << strerror(errno);
         return -1;

@@ -96,6 +96,14 @@ public:
         in_.reset();
         out_.reset();
     }
+    bool outEmpty() const
+    {
+        return out_.empty();
+    }
+    bool inEmpty() const
+    {
+        return in_.empty();
+    }
 
 private:
     ConnectionState state_;

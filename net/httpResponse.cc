@@ -674,7 +674,7 @@ int HttpResponse::sendResponse(const ConnectionPtr &conn) const
         return -1;
     total += n;
     HttpRequest *req = std::any_cast<HttpRequest>(conn->getContext());
-    if (req->getMethod() != HEAD && content_.size())
+    if (req->method() != HEAD && content_.size())
     {
         if ((n = conn->send(content_)) == -1)
             return -1;

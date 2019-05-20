@@ -25,29 +25,29 @@ class HttpRequest
         return StatusString[status_];
     }
 
-    std::string getHeader(const std::string &str)
+    std::string header(const std::string &str)
     {
         if (headers_.count(str))
             return headers_[str];
         return "";
     }
-    HttpMethod getMethod() const
+    HttpMethod method() const
     {
         return method_;
     }
-    ParseStatus getStatus() const
+    ParseStatus status() const
     {
         return status_;
     }
-    HttpVersion getVersion() const
+    HttpVersion version() const
     {
         return version_;
     }
-    std::string getRequestPath() const
+    std::string path() const
     {
         return path_;
     }
-    event::TimerKey getRequestTimerKey() const
+    event::TimerKey requestTimerKey() const
     {
         return requestTimerKey_;
     }
@@ -55,7 +55,7 @@ class HttpRequest
     {
         requestTimerKey_ = tk;
     }
-    event::TimerKey getAliveTimerKey() const
+    event::TimerKey aliveTimerKey() const
     {
         return aliveTimerKey_;
     }

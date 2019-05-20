@@ -86,8 +86,11 @@ private:
   Acceptor acceptor_;
   std::vector<int> bindingPorts_;
   ReadCallback readCallback_;
+  //TODO:delete,写事件回调最基本的就是在可写时将用户态写缓冲区中的内容写到内核态缓冲区中
+  //这个在Connection::handleWrite中已经完成了，后续可以不需要其他操作；
   WriteCallback writeCallback_;
   CloseCallback closeCallback_;
+  //TODO:delete,错误的处理流程已经包含在读写回调中了
   Callback errorCallback_;
 };
 } // namespace net

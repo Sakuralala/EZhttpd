@@ -5,6 +5,10 @@
  * **/
 #include <string>
 #include <stdio.h>
+#ifndef  LOG_STDOUT
+#define LOG_STDOUT 
+#endif // !LOG_STDOUT 
+//#undef LOG_STDOUT
 namespace bases
 {
 //写文件的封装  使用了64mb的缓冲区

@@ -4,7 +4,6 @@
 #include "httpRequest.h"
 #include "httpResponse.h"
 #include "../event/eventLoop.h"
-//#include "../bases/circularBuffer.h"
 #include "../bases/newCircularBuffer.h"
 #include "../event/timer.h"
 #include "../log/logger.h"
@@ -14,6 +13,7 @@ HttpServer::HttpServer(event::EventLoop *loop, const std::vector<int> &ports) : 
 {
     setReadCallback(std::bind(&net::HttpServer::onMessage, this, std::placeholders::_1, std::placeholders::_2));
     setCloseCallback(std::bind(&net::HttpServer::onClose, this, std::placeholders::_1));
+    setResponseCallback(std::bind(&net::HttpServer::onResponse, this, std::placeholders::_1));
 }
 HttpServer::~HttpServer() = default;
 //http请求结束时的回调,注意最后需要调用server的delConnection
@@ -31,8 +31,8 @@ void HttpServer::onClose(const ConnectionPtr &conn)
     if (conn->getContext()->has_value())
     {
         HttpRequest *req = std::any_cast<HttpRequest>(conn->getContext());
-        conn->getLoop()->delTimer(req->getRequestTimerKey());
-        conn->getLoop()->delTimer(req->getAliveTimerKey());
+        conn->getLoop()->delTimer(req->requestTimerKey());
+        conn->getLoop()->delTimer(req->aliveTimerKey());
     }
     else
     {
@@ -62,26 +62,34 @@ void HttpServer::onMessage(const ConnectionPtr &conn, bases::UserBuffer &buf)
     }
     else //删除定时器
     {
-        currentLoop->delTimer(req->getRequestTimerKey());
+        currentLoop->delTimer(req->requestTimerKey());
         //长连接复用请求时的初始状态是wait,到这里需要删除长连接的定时器
-        if (req->getStatus() == WAIT)
+        if (req->status() == WAIT)
         {
-            currentLoop->delTimer(req->getAliveTimerKey());
-            LOG_DEBUG << "Remove timer:" << req->getAliveTimerKey().format();
+            currentLoop->delTimer(req->aliveTimerKey());
+            LOG_DEBUG << "Remove timer:" << req->aliveTimerKey().format();
         }
     }
 
     //设置定时器
     req->setRequestTimerKey(currentLoop->addTimer(requestTimeout_, std::bind(&Connection::handleClose, conn.get())));
-    LOG_DEBUG << "Set timer,timeout at:" << req->getRequestTimerKey().format();
+    LOG_DEBUG << "Set timer,timeout at:" << req->requestTimerKey().format();
     auto status = req->parse(buf);
+    if (responseCallback_)
+        responseCallback_(conn);
+}
+void HttpServer::onResponse(const ConnectionPtr &conn)
+{
+    auto currentLoop = conn->getLoop();
+    HttpRequest *req = std::any_cast<HttpRequest>(conn->getContext());
+    auto status = req->status();
     //解析出错
     if (status > DONE)
     {
         auto peer(conn->getPeerAddress());
         LOG_ERROR << "Parse error:" << req->status2String()
                   << " from " << peer.first << ":" << peer.second << ".";
-        currentLoop->delTimer(req->getRequestTimerKey());
+        currentLoop->delTimer(req->requestTimerKey());
         //400:bad request
         if (conn->send(HttpResponse(HttpVersion::Ver_11, HTTP_BAD_REQUEST)) == -1)
         {
@@ -89,7 +97,7 @@ void HttpServer::onMessage(const ConnectionPtr &conn, bases::UserBuffer &buf)
             return;
         }
         conn->setState(DISCONNECTING);
-        if (buf.empty())
+        if (conn->outEmpty())
         {
             conn->handleClose();
         }
@@ -98,24 +106,24 @@ void HttpServer::onMessage(const ConnectionPtr &conn, bases::UserBuffer &buf)
     {
         auto peer(conn->getPeerAddress());
         LOG_DEBUG << "Parse http request from " << peer.first << ":" << peer.second << " done.";
-        currentLoop->delTimer(req->getRequestTimerKey());
+        currentLoop->delTimer(req->requestTimerKey());
         //请求的资源路径
-        auto requestPath(req->getRequestPath());
+        auto requestPath(req->path());
         //TODO:构造响应 200 400 404 408
         //DONE:完成
-        if (conn->send(HttpResponse(req->getVersion(), requestPath)) == -1)
+        if (conn->send(HttpResponse(req->version(), requestPath)) == -1)
         {
             conn->handleClose();
             return;
         }
-        if (req->getHeader("Connection") != "Keep-Alive" &&
-            req->getHeader("Connection") != "keep-alive" && req->getHeader("connection") != "Keep-Alive" && req->getHeader("connection") != "keep-alive")
+        if (req->header("Connection") != "Keep-Alive" &&
+            req->header("Connection") != "keep-alive" && req->header("connection") != "Keep-Alive" && req->header("connection") != "keep-alive")
         {
             //NOTE:由于webbench、ab压测时都需要服务端主动关闭连接(默认短连接)，所以这里在解析完请求之后主动设置当前
             //连接状态为准备断开状态，以便写事件回调在写完响应到套接字内核缓冲区后能够及时关闭连接；
             conn->setState(DISCONNECTING);
             //写完直接关
-            if (buf.empty())
+            if (conn->outEmpty())
             {
                 conn->handleClose();
             }
@@ -126,7 +134,7 @@ void HttpServer::onMessage(const ConnectionPtr &conn, bases::UserBuffer &buf)
             conn->resetBuffer();
             req->resetRequest();
             req->setAliveTimerKey(currentLoop->addTimer(aliveTimeout_, std::bind(&Connection::handleClose, conn.get())));
-            LOG_DEBUG << "Set timer,timeout at:" << req->getAliveTimerKey().format();
+            LOG_DEBUG << "Set timer,timeout at:" << req->aliveTimerKey().format();
         }
     }
 }
