@@ -29,6 +29,16 @@ std::vector<std::string> split(const std::string &str, const char ch)
         ret.push_back(str.substr(lastPos, curPos - lastPos));
     return ret;
 }
+int createNonBlockingSocket()
+{
+    int socketFd = socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC | SOCK_NONBLOCK, 0);
+    if (socketFd == -1)
+    {
+        LOG_ERROR << "Create socket error:" << strerror(errno);
+        return -1;
+    }
+    return socketFd;
+}
 int listen(int port)
 {
     if (port <= 0)
@@ -38,8 +48,8 @@ int listen(int port)
     }
     //创建socket->设置需要监听的ip:port->bind->listen
     struct sockaddr_in bindAddr;
-    int listenFd_ = socket(AF_INET, SOCK_STREAM, 0);
-    if (listenFd_ == -1)
+    int listenFd = socket(AF_INET, SOCK_STREAM, 0);
+    if (listenFd == -1)
     {
         LOG_ERROR << "Create socket error:" << strerror(errno);
         return -1;
@@ -53,22 +63,22 @@ int listen(int port)
     //2.可以在服务端具有多个网卡的情况下让不同的进程监听具有不同ip但是相同的port;
     //3.可以让服务端单进程...(同上)
     int optval = 1;
-    if (setsockopt(listenFd_, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) == -1)
+    if (setsockopt(listenFd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) == -1)
     {
         LOG_ERROR << "Reuse port socket error:" << strerror(errno);
         return -1;
     }
-    if (bind(listenFd_, (sockaddr *)&bindAddr, sizeof(bindAddr)) == -1)
+    if (bind(listenFd, (sockaddr *)&bindAddr, sizeof(bindAddr)) == -1)
     {
         LOG_ERROR << "Bind socket error:" << strerror(errno);
         return -1;
     }
-    if (::listen(listenFd_, 2048) == -1)
+    if (::listen(listenFd, 2048) == -1)
     {
         LOG_ERROR << "Listen socket error:" << strerror(errno);
         return -1;
     }
-    return listenFd_;
+    return listenFd;
 }
 bool setNonBlocking(int fd)
 {

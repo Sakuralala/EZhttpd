@@ -11,7 +11,7 @@ namespace event
 class EventLoop;
 class Event : Nocopyable
 {
-  public:
+public:
     typedef std::function<void()> Callback;
     Event(int fd, EventLoop *loop);
     Event(Event &&ev);
@@ -72,11 +72,13 @@ class Event : Nocopyable
     */
     void enableRead()
     {
+        monitored = true;
         interestedType_ |= ReadEvent;
         update();
     }
     void enableWrite()
     {
+        monitored = true;
         interestedType_ |= WriteEvent;
         update();
     }
@@ -92,6 +94,7 @@ class Event : Nocopyable
     }
     void enableAll()
     {
+        monitored = true;
         interestedType_ |= (ReadEvent | WriteEvent);
         update();
     }
@@ -105,9 +108,10 @@ class Event : Nocopyable
     //延长owner对象的生命期，防止在回调调用的过程中owner对象被析构
     void tie(const std::shared_ptr<void> &owner);
 
-  private:
+private:
     static const int ReadEvent;
     static const int WriteEvent;
+    bool monitored;
     //NOTE:当前event并不拥有fd
     int fd_;
     /******另一种做法:使用mutex保护下面三个成员****/

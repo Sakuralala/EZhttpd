@@ -10,6 +10,7 @@ namespace bases
 {
 int listen(int port);
 bool setNonBlocking(int fd);
+int createNonBlockingSocket();
 std::vector<std::string> split(const std::string &str, const char ch);
 } // namespace bases
 #endif 

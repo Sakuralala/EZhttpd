@@ -1,7 +1,7 @@
 #TODO:头文件修改时不会更新
 # tool marcros
 CC := clang++
-CCFLAG := -fno-limit-debug-info -fno-elide-constructors -std=c++17 -pthread
+CCFLAG :=  -fno-limit-debug-info -fno-elide-constructors -std=c++17 -pthread
 DBGFLAG := -g
 CCOBJFLAG := $(CCFLAG) -c
 
