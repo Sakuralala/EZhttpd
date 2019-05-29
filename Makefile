@@ -16,7 +16,7 @@ SRC_PATH5 := toys
 DEBUG_PATH := debug
 
 # compile marcros
-TARGET_NAME1 := main
+TARGET_NAME1 := server_test
 TARGET_NAME2 := client_test
 ifeq ($(OS),Windows_NT)
 	TARGET_NAME := $(addsuffix .exe,$(TARGET_NAME))
@@ -25,7 +25,7 @@ TARGET1 := $(BIN_PATH)/$(TARGET_NAME1)
 TARGET2 := $(BIN_PATH)/$(TARGET_NAME2)
 TARGET_DEBUG1 := $(DEBUG_PATH)/$(TARGET_NAME1)
 TARGET_DEBUG2 := $(DEBUG_PATH)/$(TARGET_NAME2)
-#MAIN_SRC := main.cpp
+#server_test_SRC := server_test.cpp
 
 # src files & obj files
 SRC1 := $(foreach x, $(SRC_PATH1), $(wildcard $(addprefix $(x)/*,.c*)))
@@ -33,7 +33,7 @@ SRC2 := $(foreach x, $(SRC_PATH2), $(wildcard $(addprefix $(x)/*,.c*)))
 SRC3 := $(foreach x, $(SRC_PATH3), $(wildcard $(addprefix $(x)/*,.c*)))
 SRC4 := $(foreach x, $(SRC_PATH4), $(wildcard $(addprefix $(x)/*,.c*)))
 SRC5 := $(foreach x, $(SRC_PATH5), $(wildcard $(addprefix $(x)/*,.c*)))
-SRC_TOTAL1 := $(SRC1) $(SRC2) $(SRC3) $(SRC4)  $(SRC5) main.cpp
+SRC_TOTAL1 := $(SRC1) $(SRC2) $(SRC3) $(SRC4)  $(SRC5) server_test.cpp
 SRC_TOTAL2 := $(SRC1) $(SRC2) $(SRC3) $(SRC4)  $(SRC5) client_test.cpp
 OBJ1 := $(addprefix $(OBJ_PATH)/, $(addsuffix .o, $(notdir $(basename $(SRC_TOTAL1)))))
 OBJ_DEBUG1 := $(addprefix $(DEBUG_PATH)/, $(addsuffix .o, $(notdir $(basename $(SRC_TOTAL1)))))
@@ -58,7 +58,7 @@ $(TARGET2): $(OBJ2)
  
 $(OBJ_PATH)/client_test.o: client_test.cpp 
 	$(CC) $(CCOBJFLAG) -o $@ $^
-$(OBJ_PATH)/main.o: main.cpp 
+$(OBJ_PATH)/server_test.o: server_test.cpp 
 	$(CC) $(CCOBJFLAG) -o $@ $^
 $(OBJ_PATH)/%.o: $(SRC_PATH1)/%.c* 
 	$(CC) $(CCOBJFLAG) -o $@ $^
@@ -74,7 +74,7 @@ $(OBJ_PATH)/%.o: $(SRC_PATH5)/%.c*
 
 $(DEBUG_PATH)/client_test.o: client_test.cpp
 	$(CC) $(CCOBJFLAG) $(DBGFLAG) -o $@ $^
-$(DEBUG_PATH)/main.o: main.cpp
+$(DEBUG_PATH)/server_test.o: server_test.cpp
 	$(CC) $(CCOBJFLAG) $(DBGFLAG) -o $@ $^
 $(DEBUG_PATH)/%.o: $(SRC_PATH1)/%.c*
 	$(CC) $(CCOBJFLAG) $(DBGFLAG) -o $@ $^

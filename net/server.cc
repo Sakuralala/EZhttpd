@@ -14,15 +14,18 @@ Server::Server(event::EventLoop *loop, const std::vector<int> &ports, int interv
         LOG_FATAL << "Create server failed,event loop can't be null.";
 
     timerKey_ = loop_->addTimer(infoShowInterval_, std::bind(&net::Server::connectionInfoShow, this), 0);
-    //setReadCallback(std::bind(&net::Server::discardMsg, this, std::placeholders::_1, std::placeholders::_2));
+    setReadCallback(std::bind(&net::Server::defaultReadCallback, this, std::placeholders::_1, std::placeholders::_2));
+    setCloseCallback(std::bind(&net::Server::delConnection, this, std::placeholders::_1));
 }
 Server::~Server()
 {
     stop();
 }
-void Server::discardMsg(const ConnectionPtr &ptr, bases::UserBuffer &buf)
+void Server::defaultReadCallback(const ConnectionPtr &conn, bases::UserBuffer &buf)
 {
-    ptr->send("HTTP/1.1 404 Not Found\r\n\r\n", 30);
+    LOG_DEBUG << "New read event in socket: " << conn->getFd();
+    conn->send(buf.getAll());
+    buf.retrieve(buf.size());
 }
 void Server::connectionInfoShow() const
 {
@@ -53,7 +56,7 @@ void Server::distributeConnetion(int acceptFd, const struct sockaddr_in &clientA
      * **/
     loop_->assertInOwnerThread();
     total_ += 1;
-   LOG_DEBUG << "Total connection:" << total_;
+    LOG_DEBUG << "Total connection:" << total_;
     auto loop = pool_.getNextLoop();
     struct sockaddr_in localAddr;
     socklen_t localAddrLen = sizeof(localAddr);
@@ -77,15 +80,13 @@ void Server::distributeConnetion(int acceptFd, const struct sockaddr_in &clientA
     }
     //修改感兴趣的事件需要在owner线程中进行，因为没有加锁
     loop->runInLoop(std::bind(&net::Connection::eventInit, conn.get()));
-    //auto peer = conn->getPeerAddress();
-    //auto local = conn->getLocalAddress();
 }
 //此函数一般都是在子线程close对应connection时进行回调，即由其他线程调用，为了防止race condition
 //所以需要runInLoop
-void Server::delConnection(int fd)
+void Server::delConnection(const ConnectionPtr &conn)
 {
     //loop_->runInLoop([fd, this]() { this->_delConnection(fd); });
-    loop_->runInLoop(std::bind(&net::Server::_delConnection, this, fd));
+    loop_->runInLoop(std::bind(&net::Server::_delConnection, this, conn->getFd()));
 }
 void Server::_delConnection(int fd)
 {

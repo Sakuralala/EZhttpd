@@ -12,7 +12,7 @@ Client::Client(event::EventLoop *loop) : connected_(false), retryTimes_(0), loop
 {
     if (!loop)
         LOG_FATAL << "Event loop can't be null.";
-    setCloseCallback(std::bind(&net::Client::defaultCloseCallback,this,std::placeholders::_1));
+    setCloseCallback(std::bind(&net::Client::defaultCloseCallback, this, std::placeholders::_1));
 }
 void Client::defaultCloseCallback(const ConnectionPtr &conn)
 {
@@ -191,7 +191,7 @@ void Client::connectionEstablished()
         resetConnectingEvent();
         return;
     }
-    LOG_INFO << "Connect success.";
+    LOG_DEBUG << "Connect success.";
     connected_ = true;
     connectingEvent_->remove();
     conn_.reset(new Connection(loop_, fd_, localAddr_, peerAddr_));

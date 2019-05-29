@@ -44,7 +44,10 @@ void Connection::handleRead()
         }
         //对端关闭或半关闭了连接
         if (rc == 0)
+        {
+            LOG_INFO << "Peer close or shutdown the connection.";
             state_ = DISCONNECTING;
+        }
         if (rc && readCallback_)
             readCallback_(shared_from_this(), in_);
     }
@@ -66,6 +69,7 @@ void Connection::handleWrite()
             writeCallback_(out_);
         if (state_ == DISCONNECTING && out_.empty())
         {
+            LOG_INFO << "Close the connection.";
             handleClose();
         }
     }

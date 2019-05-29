@@ -117,8 +117,13 @@ int CharCircularBuffer::recv(int fd)
         }
         else if (n == 0) //对端关闭了写端或者直接关闭了连接，对于前者，说明请求发完了，那么正常处
         //理即可 对于后者，此时再写会出错,所以设置一个定时器，超时直接关闭连接
+        //FIXME: maybe EOF, not the peer closed the connection.
+        //FIXED:distinguish with total.
         {
-            LOG_DEBUG << "Peer closed connection, socket:" << fd;
+            if (!total)
+            {
+                LOG_DEBUG << "Peer closed connection, socket:" << fd;
+            }
             break;
         }
         //n>0
@@ -195,6 +200,10 @@ int CharCircularBuffer::send(int fd, const char *msg, int len)
         tail_ = (tail_ + len) % capacity_;
         dataSize_ += len;
         LOG_DEBUG << "Saved the remaining part,size:" << len;
+    }
+    else
+    {
+        LOG_INFO << "Write completely.";
     }
     return total;
 }

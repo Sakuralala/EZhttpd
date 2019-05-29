@@ -12,7 +12,7 @@ MemcachedServer::MemcachedServer(event::EventLoop *loop, const std::vector<int> 
 }
 void MemcachedServer::onClose(const net::Server::ConnectionPtr &conn)
 {
-    delConnection(conn->getFd());
+    delConnection(conn);
 }
 void MemcachedServer::onMessage(const net::Server::ConnectionPtr &conn, bases::UserBuffer &buf)
 {

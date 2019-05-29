@@ -33,16 +33,10 @@ public:
   typedef std::function<void(const ConnectionPtr &)> CloseCallback;
   //typedef std::shared_ptr<event::Event> EventPtr;
 
-  Server(event::EventLoop *loop, const std::vector<int> &ports, int interval = 30);
-  virtual ~Server();
-  void run(int numThreads);
-  void stop();
   event::EventLoop *getLoop()
   {
     return loop_;
   }
-  //新连接建立的回调
-  void distributeConnetion(int acceptFd, const struct sockaddr_in &clientAddr);
   void setReadCallback(ReadCallback cb)
   {
     readCallback_ = std::move(cb);
@@ -60,12 +54,17 @@ public:
   {
     errorCallback_ = std::move(cb);
   }
+
+  Server(event::EventLoop *loop, const std::vector<int> &ports, int interval = 30);
+  virtual ~Server();
+  void run(int numThreads);
+  void stop();
+  //新连接建立的回调
+  void distributeConnetion(int acceptFd, const struct sockaddr_in &clientAddr);
   //默认读完后会将数据全部丢弃
-  void discardMsg(const ConnectionPtr &ptr, bases::UserBuffer &buf);
-  //删除连接
-  void delConnection(int fd);
-  //具体实现
-  void _delConnection(int fd);
+  void defaultReadCallback(const ConnectionPtr &conn, bases::UserBuffer &buf);
+  //default close callback
+  void delConnection(const ConnectionPtr &conn);
   //idel function, just show current connetion number.
   //run every 30s.
   void connectionInfoShow() const;
@@ -75,6 +74,8 @@ protected:
   std::unordered_map<int, ConnectionPtr> connected_;
 
 private:
+  //具体实现
+  void _delConnection(int fd);
   bool running_;
   int infoShowInterval_;
   long long total_;

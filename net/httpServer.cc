@@ -39,7 +39,7 @@ void HttpServer::onClose(const ConnectionPtr &conn)
         LOG_INFO << "Request is null.";
     }
     LOG_DEBUG << "Connection fd:" << conn->getFd() << " deleted.";
-    delConnection(conn->getFd());
+    delConnection(conn);
 }
 //收到http请求后最终调用到的回调
 void HttpServer::onMessage(const ConnectionPtr &conn, bases::UserBuffer &buf)
