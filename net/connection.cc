@@ -124,7 +124,7 @@ void Connection::handleClose()
         }
         */
 
-        //event_.remove();
+        event_.remove();
         if (closeCallback_)
             closeCallback_(shared_from_this());
     }

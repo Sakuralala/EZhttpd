@@ -22,7 +22,14 @@ public:
     typedef std::function<void(const ConnectionPtr &)> Callback;
     Client(event::EventLoop *loop);
     ~Client() = default;
+    event::EventLoop *getLoop() const
+    {
+        return loop_;
+    }
+    void defaultCloseCallback(const ConnectionPtr &conn);
     bool connect(struct sockaddr_in &peerAddr);
+    bool connect(const std::string &peer);
+    bool connect(const std::string &peerIP, int port);
     void disconnect();
     void shutdownWrite();
     //before established callbacks
@@ -48,6 +55,7 @@ public:
     std::pair<std::string, uint16_t> getLocalAddress() const;
 
 private:
+    bool _connect();
     void connecting();
     void retry();
     void resetConnectingEvent();

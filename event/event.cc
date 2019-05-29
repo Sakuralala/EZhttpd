@@ -66,6 +66,7 @@ void Event::remove()
     loop_->assertInOwnerThread();
     operation_ = EPOLL_CTL_DEL;
     loop_->updateEvent(this);
+    monitored = false;
 }
 void Event::tie(const std::shared_ptr<void> &owner)
 {

@@ -29,6 +29,7 @@ std::vector<std::string> split(const std::string &str, const char ch)
         ret.push_back(str.substr(lastPos, curPos - lastPos));
     return ret;
 }
+
 int createNonBlockingSocket()
 {
     int socketFd = socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC | SOCK_NONBLOCK, 0);

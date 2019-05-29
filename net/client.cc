@@ -12,7 +12,56 @@ Client::Client(event::EventLoop *loop) : connected_(false), retryTimes_(0), loop
 {
     if (!loop)
         LOG_FATAL << "Event loop can't be null.";
+    setCloseCallback(std::bind(&net::Client::defaultCloseCallback,this,std::placeholders::_1));
 }
+void Client::defaultCloseCallback(const ConnectionPtr &conn)
+{
+    //assert: connected == true.
+    ::close(fd_);
+    LOG_INFO << "Close fd: " << fd_;
+}
+
+bool Client::connect(const std::string &peer)
+{
+    loop_->assertInOwnerThread();
+    if (connected_)
+        disconnect();
+    fd_ = bases::createNonBlockingSocket();
+    if (fd_ == -1)
+        return false;
+    auto ipport(bases::split(peer, ':'));
+    if (ipport.size() != 2)
+        return false;
+    //0 is returned if src does not contain a character string rep‐
+    //resenting a valid network address in the specified address family.
+    if (!inet_pton(AF_INET, ipport[0].c_str(), &peerAddr_.sin_addr))
+    {
+        LOG_ERROR << "Invalid IP address:" << ipport[0];
+        return false;
+    }
+    peerAddr_.sin_family = AF_INET;
+    //std::invalid_argument is throwed if wrong.
+    peerAddr_.sin_port = htons(std::stoi(ipport[1]));
+    return _connect();
+}
+bool Client::connect(const std::string &peerIP, int port)
+{
+    loop_->assertInOwnerThread();
+    if (connected_)
+        disconnect();
+    fd_ = bases::createNonBlockingSocket();
+    if (fd_ == -1)
+        return false;
+    if (!inet_pton(AF_INET, peerIP.c_str(), &peerAddr_.sin_addr))
+    {
+        LOG_ERROR << "Invalid IP address:" << peerIP;
+        return false;
+    }
+    peerAddr_.sin_family = AF_INET;
+    peerAddr_.sin_port = htons(port);
+    return _connect();
+}
+
 bool Client::connect(sockaddr_in &peerAddr)
 {
     loop_->assertInOwnerThread();
@@ -22,7 +71,11 @@ bool Client::connect(sockaddr_in &peerAddr)
     if (fd_ == -1)
         return false;
     peerAddr_ = peerAddr;
-    auto ret = ::connect(fd_, (sockaddr *)&peerAddr, sizeof(sockaddr_in));
+    return _connect();
+}
+bool Client::_connect()
+{
+    auto ret = ::connect(fd_, (sockaddr *)&peerAddr_, sizeof(sockaddr_in));
     if (ret == -1)
     {
         switch (errno)
@@ -99,6 +152,7 @@ void Client::disconnect()
         connected_ = false;
         conn_.reset();
         ::close(fd_);
+        LOG_DEBUG << "Close connection by client.";
     }
 }
 //client close the write part proactively after the request is sent totally.
@@ -109,6 +163,7 @@ void Client::shutdownWrite()
     {
         connected_ = false;
         ::shutdown(fd_, SHUT_WR);
+        LOG_INFO << "Client shutdown write part.";
     }
 }
 
@@ -136,7 +191,9 @@ void Client::connectionEstablished()
         resetConnectingEvent();
         return;
     }
+    LOG_INFO << "Connect success.";
     connected_ = true;
+    connectingEvent_->remove();
     conn_.reset(new Connection(loop_, fd_, localAddr_, peerAddr_));
     conn_->setWriteCallback(writeCallback_);
     conn_->setReadCallback(readCallback_);
@@ -144,8 +201,8 @@ void Client::connectionEstablished()
     //owner thread.
     conn_->eventInit();
     //still under connectingEvent_ call schedule:
-    //Event::handleEvent->Client::connectionEstablished; so reset should be the last line.
-    resetConnectingEvent();
+    //Event::handleEvent->Client::connectionEstablished; so reset should run later.
+    loop_->queueInLoop(std::bind(&net::Client::resetConnectingEvent, this));
     if (connectionCallback_)
         connectionCallback_(conn_);
 }

@@ -130,7 +130,7 @@ void HttpServer::onResponse(const ConnectionPtr &conn)
         }
         else //长连接
         {
-            LOG_DEBUG << "Keep alive to:" << peer.first << ":" << peer.second;
+            LOG_INFO << "Keep alive to:" << peer.first << ":" << peer.second;
             conn->resetBuffer();
             req->resetRequest();
             req->setAliveTimerKey(currentLoop->addTimer(aliveTimeout_, std::bind(&Connection::handleClose, conn.get())));
