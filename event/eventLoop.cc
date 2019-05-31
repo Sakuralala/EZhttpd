@@ -113,6 +113,10 @@ void EventLoop::loop()
         int n = poller_->poll(WaitMs, readyList_);
         if (n)
         {
+            //NOTE:一系列callback的起点都在此处，为避免race condition,在loop的开头调用了
+            //assert,故正常来说在一系列的各个callback中并不需要调用assert，因为它们一般是
+            //被动被调用的，即从此处开始被调用;但是对于主动调用callback的情形，还是要根
+            //据是否会产生race condition的情况决定要不要assert.
             for (auto eventPtr : readyList_)
                 eventPtr->handleEvent();
             readyList_.clear();

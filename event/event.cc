@@ -9,7 +9,7 @@ namespace event
 const int Event::WriteEvent = EPOLLOUT;
 const int Event::ReadEvent = EPOLLIN | EPOLLPRI;
 //需要监控的事件对应的文件描述符，感兴趣的事件类型
-Event::Event(int fd, EventLoop *loop) : monitored(false), fd_(fd), operation_(-1), readyType_(0),
+Event::Event(int fd, EventLoop *loop) :  fd_(fd), operation_(-1), readyType_(0),
                                         interestedType_(0), loop_(loop), tied_(false)
 {
     if (!loop_)
@@ -33,12 +33,9 @@ Event::Event(Event &&ev)
     ev.loop_ = nullptr;
     readCallback_ = ev.readCallback_;
     writeCallback_ = ev.writeCallback_;
-    errorCallback_ = ev.errorCallback_;
 }
 Event::~Event()
 {
-    if (monitored)
-        remove();
 }
 //通用的调用次序:Event::enable/disable*->Event::update->EventLoop::updateEvent->Epoller::updateEvent
 void Event::update()
@@ -66,7 +63,6 @@ void Event::remove()
     loop_->assertInOwnerThread();
     operation_ = EPOLL_CTL_DEL;
     loop_->updateEvent(this);
-    monitored = false;
 }
 void Event::tie(const std::shared_ptr<void> &owner)
 {
@@ -123,6 +119,7 @@ void Event::_handleEvent()
     //因为服务端不可能没事就读一个套接字；
     if (readyType_ & (ReadEvent | EPOLLRDHUP))
     {
+        //LOG_INFO << "Read event.";
         if (readCallback_)
             readCallback_();
     }

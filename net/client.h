@@ -31,7 +31,6 @@ public:
     bool connect(const std::string &peer);
     bool connect(const std::string &peerIP, int port);
     void disconnect();
-    void shutdownWrite();
     //before established callbacks
     void connectionEstablished();
     void connectionFailed();

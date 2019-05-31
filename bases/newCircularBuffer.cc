@@ -203,8 +203,9 @@ int CharCircularBuffer::send(int fd, const char *msg, int len)
     }
     else
     {
-        LOG_INFO << "Write completely.";
+        LOG_DEBUG << "Write completely.";
     }
+    LOG_DEBUG << "Send " << total << " bytes data.";
     return total;
 }
 

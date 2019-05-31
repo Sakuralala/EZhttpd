@@ -25,6 +25,7 @@ void Server::defaultReadCallback(const ConnectionPtr &conn, bases::UserBuffer &b
 {
     LOG_DEBUG << "New read event in socket: " << conn->getFd();
     conn->send(buf.getAll());
+    conn->shutdownWrite();
     buf.retrieve(buf.size());
 }
 void Server::connectionInfoShow() const
@@ -66,10 +67,9 @@ void Server::distributeConnetion(int acceptFd, const struct sockaddr_in &clientA
         return;
     }
     ConnectionPtr conn(new Connection(loop, acceptFd, localAddr, clientAddr));
-    conn->setErrorCallback(errorCallback_);
+    //conn->setErrorCallback(errorCallback_);
     conn->setWriteCallback(writeCallback_);
     conn->setReadCallback(readCallback_);
-    //
     conn->setCloseCallback(closeCallback_);
     //conn->setCloseCallback(std::bind(&net::Server::delConnection, this, std::placeholders::_1));
     connected_.emplace(acceptFd, conn);
@@ -90,16 +90,6 @@ void Server::delConnection(const ConnectionPtr &conn)
 }
 void Server::_delConnection(int fd)
 {
-    //NOTE:由Server进行套接字描述符的关闭
-    if (::close(fd))
-    {
-        LOG_ERROR << "Close fd:" << fd << " error:" << strerror(errno);
-    }
-    else
-    {
-        LOG_DEBUG << "Close fd:" << fd;
-    }
-    LOG_DEBUG << "Current reference count:" << connected_[fd].use_count();
     connected_.erase(fd);
     if (!connected_.size())
         LOG_DEBUG << "No connetion now.";

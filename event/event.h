@@ -30,6 +30,7 @@ public:
     {
         writeCallback_ = std::move(cb);
     }
+    /*
     void setErrorCallback(Callback cb)
     {
         errorCallback_ = std::move(cb);
@@ -38,6 +39,7 @@ public:
     {
         closeCallback_ = std::move(cb);
     }
+    */
     void setReadyType(int rt)
     {
         readyType_ = rt;
@@ -70,15 +72,21 @@ public:
      *制要求在owner线程，否则直接报错；
      *另外，enable/disable*都需要std::bind()来调用的话感觉很奇怪
     */
+    bool isWriting() const
+    {
+        return interestedType_ & WriteEvent;
+    }
+    bool isReading() const
+    {
+        return interestedType_ & ReadEvent;
+    }
     void enableRead()
     {
-        monitored = true;
         interestedType_ |= ReadEvent;
         update();
     }
     void enableWrite()
     {
-        monitored = true;
         interestedType_ |= WriteEvent;
         update();
     }
@@ -94,7 +102,6 @@ public:
     }
     void enableAll()
     {
-        monitored = true;
         interestedType_ |= (ReadEvent | WriteEvent);
         update();
     }
@@ -111,7 +118,6 @@ public:
 private:
     static const int ReadEvent;
     static const int WriteEvent;
-    bool monitored;
     //NOTE:当前event并不拥有fd
     int fd_;
     /******另一种做法:使用mutex保护下面三个成员****/
@@ -128,9 +134,9 @@ private:
     EventLoop *loop_;
     Callback readCallback_;
     Callback writeCallback_;
-    Callback errorCallback_;
+    //Callback errorCallback_;
     //这个是为了方便EPOLLHUP事件就绪时方便关闭连接
-    Callback closeCallback_;
+    //Callback closeCallback_;
     //在每次handleEvent之前先持有Connection对象的引用，以防止在回调调用过程中析构了Connection对象
     //另外，监听事件不需要tie，因为它没有onwer对象,所以这里额外需要一个参数
     bool tied_;

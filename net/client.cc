@@ -17,8 +17,10 @@ Client::Client(event::EventLoop *loop) : connected_(false), retryTimes_(0), loop
 void Client::defaultCloseCallback(const ConnectionPtr &conn)
 {
     //assert: connected == true.
-    ::close(fd_);
-    LOG_INFO << "Close fd: " << fd_;
+    if (connected_)
+    {
+        LOG_DEBUG << "Close fd: " << fd_;
+    }
 }
 
 bool Client::connect(const std::string &peer)
@@ -150,23 +152,11 @@ void Client::disconnect()
     if (connected_)
     {
         connected_ = false;
+        //LOG_INFO << "Current reference count:" << conn_.use_count();
         conn_.reset();
-        ::close(fd_);
         LOG_DEBUG << "Close connection by client.";
     }
 }
-//client close the write part proactively after the request is sent totally.
-void Client::shutdownWrite()
-{
-    loop_->assertInOwnerThread();
-    if (connected_)
-    {
-        connected_ = false;
-        ::shutdown(fd_, SHUT_WR);
-        LOG_INFO << "Client shutdown write part.";
-    }
-}
-
 std::pair<std::string, uint16_t> Client::getLocalAddress() const
 {
     char buf[INET_ADDRSTRLEN];

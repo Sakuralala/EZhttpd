@@ -55,10 +55,12 @@ public:
         writeCallback_ = std::move(cb);
     }
 
+    /*
     void setErrorCallback(Callback cb)
     {
         errorCallback_ = std::move(cb);
     }
+    */
     void setCloseCallback(CloseCallback cb)
     {
         closeCallback_ = std::move(cb);
@@ -66,8 +68,10 @@ public:
     //Event::handleEvent调用的wrapper，作用就是传递用户态缓冲区；
     void handleRead();
     void handleWrite();
-    void handleError();
+    //void handleError();
     void handleClose();
+    //server端
+    void shutdownWrite();
     int send(const char *msg, int len);
     int send(const std::string &msg);
     int send(const HttpResponse &response);
@@ -116,7 +120,7 @@ private:
     //事件就绪时实际调用的回调
     ReadCallback readCallback_;
     WriteCallback writeCallback_;
-    Callback errorCallback_;
+    //Callback errorCallback_;
     CloseCallback closeCallback_;
     //TODO:改为指向任意类型
     //std::shared_ptr<HttpRequest> context_;
