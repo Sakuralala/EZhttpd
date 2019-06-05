@@ -8,14 +8,15 @@
 #include "log/logger.h"
 using std::cout;
 using std::endl;
-
 void simpleReadCallback(const net::Client::ConnectionPtr &conn, bases::UserBuffer &buf)
 {
   LOG_INFO << "Received message:" << buf.getAll();
+  buf.retrieve(buf.size());
 }
 
 void clientTest(net::Client *client, const net::Client::ConnectionPtr &conn)
 {
+  //LOG_INFO << "Client send.";
   if (conn->send("Client Test.\r\n") == -1)
   {
     conn->handleClose();
@@ -41,7 +42,7 @@ int main()
   client.setConnectionCallback(std::bind(&clientTest, &client, std::placeholders::_1));
   client.setReadCallback(std::bind(&simpleReadCallback, std::placeholders::_1, std::placeholders::_2));
   client.connect("127.0.0.1:8888");
-  loop.addTimer(5, std::bind(&quit, &client));
+  loop.addTimer(3, std::bind(&quit, &client));
   loop.loop();
 
   LOG_INFO << "Client stopped.";

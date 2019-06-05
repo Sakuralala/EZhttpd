@@ -9,8 +9,8 @@
 #include "../log/logger.h"
 namespace event
 {
-//周几
-static const char *DayofWeek[7] = {"Monday", "Tuesday", "Wednsday", "Thursday", "Friday", "Saturday", "Sunday"};
+//周几 外国人是以周日为一周的起点的。。。
+static const char *DayofWeek[7] = {"Sunday","Monday", "Tuesday", "Wednsday", "Thursday", "Friday", "Saturday"};
 //timernode
 Timer::Timer(uint64_t secs, uint64_t repeats) : repeatTimes_(repeats), seconds_(secs)
 {

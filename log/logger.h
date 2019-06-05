@@ -40,6 +40,7 @@ class Logger
     const char *sourceFile_;
     int line_;
     std::string formatTime();
+    std::string originalTime();
 };
 } // namespace bases
 #define LOG_DEBUG                                            \

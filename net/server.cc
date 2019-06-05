@@ -23,10 +23,10 @@ Server::~Server()
 }
 void Server::defaultReadCallback(const ConnectionPtr &conn, bases::UserBuffer &buf)
 {
-    LOG_DEBUG << "New read event in socket: " << conn->getFd();
+    //LOG_INFO << "New read event in socket: " << conn->getFd()<<",data:"<<buf.getAll();
     conn->send(buf.getAll());
-    conn->shutdownWrite();
     buf.retrieve(buf.size());
+    conn->shutdownWrite();
 }
 void Server::connectionInfoShow() const
 {

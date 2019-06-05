@@ -32,7 +32,7 @@ std::vector<std::string> split(const std::string &str, const char ch)
 
 int createNonBlockingSocket()
 {
-    int socketFd = socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC | SOCK_NONBLOCK, 0);
+    int socketFd = socket(AF_INET, SOCK_STREAM | SOCK_CLOEXEC | SOCK_NONBLOCK, IPPROTO_TCP);
     if (socketFd == -1)
     {
         LOG_ERROR << "Create socket error:" << strerror(errno);
@@ -49,7 +49,7 @@ int listen(int port)
     }
     //创建socket->设置需要监听的ip:port->bind->listen
     struct sockaddr_in bindAddr;
-    int listenFd = socket(AF_INET, SOCK_STREAM, 0);
+    int listenFd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
     if (listenFd == -1)
     {
         LOG_ERROR << "Create socket error:" << strerror(errno);

@@ -62,6 +62,7 @@ int Epoller::poll(int ms, EventList &el)
     {
         el.push_back(static_cast<Event *>(events_[i].data.ptr));
         //具体的就绪事件类型
+        //LOG_INFO << "Ready event type: " << events_[i].events << ", is write event ready:" << (events_[i].events & EPOLLOUT);
         el[i]->setReadyType(events_[i].events);
     }
     if (n == events_.size())

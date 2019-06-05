@@ -10,7 +10,8 @@ LogLevel globalLevel = LogLevel::INFO;
 static const char *levelStr[] = {"DEBUG", "INFO", "NOTICE", "WARN", "ERROR", "FATAL"};
 Logger::Logger(const char *full_file_path, int line, LogLevel level) : sourceFile_(full_file_path), line_(line), level_(level)
 {
-    stream_ << formatTime() << " " << currentThreadID() << " " << levelStr[level_] << " ";
+    //stream_ << formatTime() << " " << currentThreadID() << " " << levelStr[level_] << " ";
+    stream_ << formatTime() << "("<<originalTime()<<")" << " " << currentThreadID() << " " << levelStr[level_] << " ";
 }
 Logger::~Logger()
 {
@@ -23,5 +24,9 @@ Logger::~Logger()
 std::string Logger::formatTime()
 {
     return event::Timer::now().format();
+}
+std::string Logger::originalTime()
+{
+    return std::to_string(event::Timer::now().getTime());
 }
 } // namespace bases

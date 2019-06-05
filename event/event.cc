@@ -9,7 +9,7 @@ namespace event
 const int Event::WriteEvent = EPOLLOUT;
 const int Event::ReadEvent = EPOLLIN | EPOLLPRI;
 //需要监控的事件对应的文件描述符，感兴趣的事件类型
-Event::Event(int fd, EventLoop *loop) :  fd_(fd), operation_(-1), readyType_(0),
+Event::Event(int fd, EventLoop *loop) : fd_(fd), operation_(-1), readyType_(0),
                                         interestedType_(0), loop_(loop), tied_(false)
 {
     if (!loop_)
@@ -111,7 +111,12 @@ void Event::_handleEvent()
     //由于某些原因出现了这个的话，让读写回调去处理即可
     if (readyType_ & (EPOLLERR | EPOLLHUP))
     {
-        readyType_ = EPOLLIN | EPOLLOUT;
+        //readyType_ = EPOLLIN | EPOLLOUT;
+        //当前还在监控读写事件
+        if (isReading())
+            readyType_ |= EPOLLIN;
+        if (isWriting())
+            readyType_ |= EPOLLOUT;
     }
     //错误事件的话,由于在读写事件的回调中是一直读或写的，那么只要在这期间出错了就会关闭连接
     //故其实不需要检测错误事件,如果是在读写之后的某个时间点发生了错误，那么服务端是检测不出来的
@@ -119,13 +124,13 @@ void Event::_handleEvent()
     //因为服务端不可能没事就读一个套接字；
     if (readyType_ & (ReadEvent | EPOLLRDHUP))
     {
-        //LOG_INFO << "Read event.";
+        LOG_INFO << "Read event, fd: "<<fd_;
         if (readCallback_)
             readCallback_();
     }
     if (readyType_ & WriteEvent)
     {
-        //LOG_INFO << " Write event ready in socket:" << fd_;
+        LOG_INFO << " Write event, socket:" << fd_;
         if (writeCallback_)
             writeCallback_();
     }
